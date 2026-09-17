@@ -25,35 +25,58 @@ static const BOOL NTYTEmptySectionCollectionSafetyVerified = NO;
 + (YTIElementRenderer *)supportedElementRendererFromSection:(YTIItemSectionRenderer *)section {
     id contentsValue = [section contentsArray];
     if (![contentsValue isKindOfClass:[NSArray class]]) {
+        NTYTLog(@"[FilterDiag] reject itemSection: contentsArray class=%@",
+                contentsValue ? NSStringFromClass([contentsValue class]) : @"<nil>");
         return nil;
     }
+
     NSArray *contents = (NSArray *)contentsValue;
     if (contents.count != 1) {
+        NTYTLog(@"[FilterDiag] reject itemSection: contentsArray.count=%lu",
+                (unsigned long)contents.count);
         return nil;
     }
 
     id wrapper = contents.firstObject;
     if (![wrapper respondsToSelector:@selector(elementRenderer)]) {
+        NTYTLog(@"[FilterDiag] reject itemSection: wrapper=%@ has no elementRenderer",
+                wrapper ? NSStringFromClass([wrapper class]) : @"<nil>");
         return nil;
     }
+
     id element = [wrapper elementRenderer];
     Class elementClass = NSClassFromString(@"YTIElementRenderer");
     if (!elementClass || ![element isKindOfClass:elementClass]) {
+        NTYTLog(@"[FilterDiag] reject itemSection: element=%@ expected=YTIElementRenderer",
+                element ? NSStringFromClass([element class]) : @"<nil>");
         return nil;
     }
+
     return (YTIElementRenderer *)element;
 }
 
 + (BOOL)isQualifiedVideoElement:(YTIElementRenderer *)element {
     if ([element respondsToSelector:@selector(hasCompatibilityOptions)] &&
         ![element hasCompatibilityOptions]) {
+        NTYTLog(@"[FilterDiag] reject element: hasCompatibilityOptions=NO");
         return NO;
     }
+
     id options = [element compatibilityOptions];
     if (!options || ![options respondsToSelector:@selector(useVideoCellControllerOnIos)]) {
+        NTYTLog(@"[FilterDiag] reject element: compatibilityOptions=%@ video selector unavailable",
+                options ? NSStringFromClass([options class]) : @"<nil>");
         return NO;
     }
-    return [(YTIElementRendererCompatibilityOptions *)options useVideoCellControllerOnIos];
+
+    BOOL qualified =
+        [(YTIElementRendererCompatibilityOptions *)options useVideoCellControllerOnIos];
+
+    if (!qualified) {
+        NTYTLog(@"[FilterDiag] reject element: useVideoCellControllerOnIos=NO");
+    }
+
+    return qualified;
 }
 
 + (NSArray *)filteredSectionCollectionFromOriginal:(NSArray *)originalCollection {
@@ -78,7 +101,11 @@ static const BOOL NTYTEmptySectionCollectionSafetyVerified = NO;
 
         for (id candidate in originalCollection) {
             BOOL removeSection = NO;
-            if ([candidate isKindOfClass:sectionClass]) {
+
+            if (![candidate isKindOfClass:sectionClass]) {
+                NTYTLog(@"[FilterDiag] reject candidate: class=%@",
+                        candidate ? NSStringFromClass([candidate class]) : @"<nil>");
+            } else {
                 @try {
                     YTIElementRenderer *element =
                         [self supportedElementRendererFromSection:(YTIItemSectionRenderer *)candidate];
