@@ -64,7 +64,13 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
 @implementation NTYTSettingsStore
 
 + (NSString *)defaultFilePath {
-    return @"/var/mobile/Library/Preferences/com.whitenightchan.nothankyoutube.plist";
+    NSString *libraryDirectory =
+        NSSearchPathForDirectoriesInDomains(NSLibraryDirectory,
+                                            NSUserDomainMask,
+                                            YES).firstObject;
+
+    return [[libraryDirectory stringByAppendingPathComponent:@"Preferences"]
+        stringByAppendingPathComponent:@"com.whitenightchan.nothankyoutube.plist"];
 }
 
 - (instancetype)init {
