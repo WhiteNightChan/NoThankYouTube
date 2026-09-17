@@ -110,7 +110,7 @@ static const BOOL NTYTEmptySectionCollectionSafetyVerified = NO;
             return originalCollection;
         }
 
-        return [filtered copy];
+        return filtered;
     } @catch (__unused NSException *containerException) {
         return originalCollection;
     }
