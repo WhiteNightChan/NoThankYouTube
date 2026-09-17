@@ -92,7 +92,16 @@ static UIViewController *NTYTViewControllerFromResponder(id object) {
 static id NTYTSectionItemForPage(NTYTSettingsCategoryPage page) {
     Class itemClass = NSClassFromString(@"YTSettingsSectionItem");
     SEL selector = @selector(itemWithTitle:titleDescription:accessibilityIdentifier:detailTextBlock:selectBlock:);
-    if (!itemClass || ![itemClass respondsToSelector:selector]) {
+
+    BOOL selectorAvailable =
+        itemClass && [itemClass respondsToSelector:selector];
+
+    NTYTLog(@"[SettingsIntegration] item factory page=%lu class=%@ selectorAvailable=%@",
+            (unsigned long)page,
+            itemClass ? NSStringFromClass(itemClass) : @"<nil>",
+            selectorAvailable ? @"YES" : @"NO");
+
+    if (!selectorAvailable) {
         return nil;
     }
 
@@ -110,13 +119,19 @@ static id NTYTSectionItemForPage(NTYTSettingsCategoryPage page) {
     };
 
     typedef id (*ItemFactory)(id, SEL, id, id, id, id, id);
-    return ((ItemFactory)objc_msgSend)(itemClass,
-                                      selector,
-                                      title,
-                                      nil,
-                                      [NSString stringWithFormat:@"ntyt.%lu", (unsigned long)page],
-                                      nil,
-                                      [selectBlock copy]);
+    id item = ((ItemFactory)objc_msgSend)(itemClass,
+                                         selector,
+                                         title,
+                                         nil,
+                                         [NSString stringWithFormat:@"ntyt.%lu", (unsigned long)page],
+                                         nil,
+                                         [selectBlock copy]);
+
+    NTYTLog(@"[SettingsIntegration] item factory page=%lu result=%@",
+            (unsigned long)page,
+            item ? @"success" : @"nil");
+
+    return item;
 }
 
 static id NTYTObjectForKeySafely(id object, NSString *key) {
@@ -140,12 +155,30 @@ static id NTYTSettingsViewControllerCandidate(id manager, id entry) {
         NTYTObjectForKeySafely(manager, @"_settingsViewController") ?: [NSNull null],
         NTYTObjectForKeySafely(entry, @"settingsViewController") ?: [NSNull null],
     ];
+
+    NTYTLog(@"[SettingsIntegration] controller search manager=%@ entry=%@",
+            manager ? NSStringFromClass([manager class]) : @"<nil>",
+            entry ? NSStringFromClass([entry class]) : @"<nil>");
+
     for (id candidate in directCandidates) {
-        if (candidate != [NSNull null] &&
-            ([candidate respondsToSelector:modern] || [candidate respondsToSelector:legacy])) {
+        if (candidate == [NSNull null]) {
+            NTYTLog(@"[SettingsIntegration] controller candidate=<nil>");
+            continue;
+        }
+
+        BOOL hasModern = [candidate respondsToSelector:modern];
+        BOOL hasLegacy = [candidate respondsToSelector:legacy];
+
+        NTYTLog(@"[SettingsIntegration] controller candidate=%@ modern=%@ legacy=%@",
+                NSStringFromClass([candidate class]),
+                hasModern ? @"YES" : @"NO",
+                hasLegacy ? @"YES" : @"NO");
+
+        if (hasModern || hasLegacy) {
             return candidate;
         }
     }
+
     return nil;
 }
 
@@ -153,18 +186,28 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
     id general = NTYTSectionItemForPage(NTYTSettingsCategoryPageGeneral);
     id videos = NTYTSectionItemForPage(NTYTSettingsCategoryPageVideos);
     id channels = NTYTSectionItemForPage(NTYTSettingsCategoryPageChannels);
+
     if (!general || !videos || !channels) {
+        NTYTLog(@"[SettingsIntegration] install failed: section items general=%@ videos=%@ channels=%@",
+                general ? @"OK" : @"nil",
+                videos ? @"OK" : @"nil",
+                channels ? @"OK" : @"nil");
         return NO;
     }
 
     id controller = NTYTSettingsViewControllerCandidate(manager, entry);
     if (!controller) {
+        NTYTLog(@"[SettingsIntegration] install failed: settings controller not found");
         return NO;
     }
+
     NSArray *items = @[general, videos, channels];
 
     SEL modern = @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:);
     if ([controller respondsToSelector:modern]) {
+        NTYTLog(@"[SettingsIntegration] install using modern setter controller=%@",
+                NSStringFromClass([controller class]));
+
         typedef void (*ModernSetter)(id, SEL, id, NSInteger, id, id, id, BOOL);
         ((ModernSetter)objc_msgSend)(controller,
                                     modern,
@@ -179,6 +222,9 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
 
     SEL legacy = @selector(setSectionItems:forCategory:title:titleDescription:headerHidden:);
     if ([controller respondsToSelector:legacy]) {
+        NTYTLog(@"[SettingsIntegration] install using legacy setter controller=%@",
+                NSStringFromClass([controller class]));
+
         typedef void (*LegacySetter)(id, SEL, id, NSInteger, id, id, BOOL);
         ((LegacySetter)objc_msgSend)(controller,
                                     legacy,
@@ -189,6 +235,10 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
                                     NO);
         return YES;
     }
+
+    NTYTLog(@"[SettingsIntegration] install failed: controller=%@ has no supported setter",
+            NSStringFromClass([controller class]));
+
     return NO;
 }
 
