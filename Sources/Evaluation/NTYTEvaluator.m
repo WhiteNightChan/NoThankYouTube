@@ -103,7 +103,11 @@
         NTYTListDefinition *definition =
             [NTYTListDefinition definitionForListID:listID];
         NTYTRuntimeListState *state = [snapshot stateForListID:listID];
-        if (!definition || !state || state.listID != listID) {
+        if (!definition ||
+            !state ||
+            state.listID != listID ||
+            !state.options ||
+            !state.rules) {
             *internalFailure = YES;
             return NTYTMatchResultNoMatch;
         }
@@ -154,7 +158,10 @@
                         options:(NTYTMatchOptions *)options
                        metadata:(NTYTContentMetadata *)metadata
                 internalFailure:(BOOL *)internalFailure {
-    if (!rule.identifier || !rule.mainMatcher || !options) {
+    if (!rule.identifier ||
+        !rule.mainMatcher ||
+        !rule.modifiers ||
+        !options) {
         *internalFailure = YES;
         return NTYTMatchResultNoMatch;
     }
