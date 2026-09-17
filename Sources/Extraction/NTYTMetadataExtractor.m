@@ -5,6 +5,10 @@
 #import "Core/NTYTContentMetadata.h"
 #import "NTYTProtobufReader.h"
 
+@interface YTIElementRenderer (NTYTElementDataAccess)
+- (NSData * _Nullable)elementData;
+@end
+
 static NSErrorDomain const NTYTMetadataExtractorErrorDomain = @"com.whitenightchan.nothankyoutube.extraction";
 
 static NSError *NTYTExtractionError(NSInteger code, NSString *message) {
