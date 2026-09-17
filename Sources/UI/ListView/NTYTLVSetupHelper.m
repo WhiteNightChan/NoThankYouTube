@@ -2,6 +2,7 @@
 #import "NTYTLVDeleteFlowHelper.h"
 #import "NTYTLVPrivate.h"
 #import "NTYTLVSelectHelper.h"
+#import "../NTYTUIStrings.h"
 
 @implementation NTYTRuleListViewController (NTYTLVSetupHelper)
 
@@ -14,7 +15,7 @@
 - (UISearchBar *)configuredSearchBar {
     UISearchBar *searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, 0, 56.0)];
     searchBar.delegate = self;
-    searchBar.placeholder = @"Search rules";
+    searchBar.placeholder = NTYTSearchPlaceholder();
     searchBar.autocapitalizationType = UITextAutocapitalizationTypeNone;
     searchBar.autocorrectionType = UITextAutocorrectionTypeNo;
     searchBar.smartQuotesType = UITextSmartQuotesTypeNo;
@@ -101,6 +102,7 @@
         imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
     [button setImage:image forState:UIControlStateNormal];
     button.tintColor = tintColor;
+    button.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight;
     [button addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
     UIView *container = [[UIView alloc] initWithFrame:button.bounds];
     [container addSubview:button];
@@ -127,6 +129,8 @@
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
                                                                  action:@selector(selectAllToolbarButtonTapped)];
+    selectAll.tintColor = UIColor.systemBlueColor;
+
     UIBarButtonItem *space =
         [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace
                                                      target:nil
