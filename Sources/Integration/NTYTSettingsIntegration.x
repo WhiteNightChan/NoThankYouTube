@@ -149,6 +149,7 @@ static id NTYTSettingsViewControllerCandidate(id manager, id entry) {
     SEL modern = @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:);
     SEL legacy = @selector(setSectionItems:forCategory:title:titleDescription:headerHidden:);
     NSArray *directCandidates = @[
+        NTYTObjectForKeySafely(manager, @"_dataDelegate") ?: [NSNull null],
         entry ?: [NSNull null],
         manager ?: [NSNull null],
         NTYTObjectForKeySafely(manager, @"settingsViewController") ?: [NSNull null],
