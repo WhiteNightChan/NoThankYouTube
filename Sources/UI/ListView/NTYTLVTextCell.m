@@ -22,10 +22,14 @@
 
         UIView *selectedView = [UIView new];
         selectedView.backgroundColor = [UIColor.labelColor colorWithAlphaComponent:0.12];
+        selectedView.autoresizingMask =
+            UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         self.selectedBackgroundView = selectedView;
 
         UIView *multipleSelectedView = [UIView new];
         multipleSelectedView.backgroundColor = [UIColor.labelColor colorWithAlphaComponent:0.10];
+        multipleSelectedView.autoresizingMask =
+            UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         self.multipleSelectionBackgroundView = multipleSelectedView;
         [self.contentView addSubview:_itemLabel];
 
