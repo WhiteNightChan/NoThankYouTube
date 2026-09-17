@@ -47,11 +47,21 @@ static BOOL NTYTSkipGroup(const uint8_t *bytes,
         if (!NTYTReadVarint(bytes, length, offset, &tag) || tag == 0) {
             return NO;
         }
-        uint32_t fieldNumber = (uint32_t)(tag >> 3);
+
+        uint64_t fieldValue = tag >> 3;
         uint8_t wireType = (uint8_t)(tag & 0x07);
+
+        if (fieldValue == 0 ||
+            fieldValue > NTYTMaximumProtobufFieldNumber) {
+            return NO;
+        }
+
+        uint32_t fieldNumber = (uint32_t)fieldValue;
+
         if (wireType == 4) {
             return fieldNumber == groupFieldNumber;
         }
+
         if (!NTYTSkipWireValue(bytes, length, offset, fieldNumber, wireType)) {
             return NO;
         }
