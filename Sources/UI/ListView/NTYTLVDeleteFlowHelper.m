@@ -38,11 +38,23 @@
 }
 
 - (void)performDeleteSelectedItems {
-    NSArray<NSUUID *> *identifiers =
-        [self resolvedIdentifiersForIndexPaths:[self selectedIndexPathsForDeleteAction]];
-    if (identifiers.count == 0) {
+    NSArray<NSIndexPath *> *selected = [self selectedIndexPathsForDeleteAction];
+    if (selected.count == 0) {
         return;
     }
+
+    NSArray<NSUUID *> *identifiers =
+        [self resolvedIdentifiersForIndexPaths:selected];
+
+    if (identifiers.count != selected.count) {
+        [self loadItemsFromAuthoritativeSource];
+        [self clearEditingSelectionForSearchRefresh];
+        [self reloadListDataForCurrentState];
+        [self refreshListUIForCurrentState];
+        [self presentFailureMessage:@"At least one selected rule no longer exists."];
+        return;
+    }
+
     NTYTMutationResult *result = [self.editingAdapter deleteIdentifiers:identifiers];
     [self loadItemsFromAuthoritativeSource];
     [self clearEditingSelectionForSearchRefresh];

@@ -1,7 +1,6 @@
 #import "NTYTLVSelectHelper.h"
-#import "UI/NTYTListEditingAdapter.h"
+#import "../NTYTListEditingAdapter.h"
 #import "NTYTLVDeleteFlowHelper.h"
-#import "NTYTLVPresentHelper.h"
 #import "NTYTLVPrivate.h"
 
 @implementation NTYTRuleListViewController (NTYTLVSelectHelper)
@@ -35,7 +34,6 @@
     selectAll.enabled = mutable && self.tableView.editing && total > 0;
     deleteButton.enabled = mutable && selected > 0;
     selectAll.title = (total > 0 && selected == total) ? @"Deselect All" : @"Select All";
-    [self updateRightBarButtonItemsForCurrentState];
 }
 
 - (void)selectAllToolbarButtonTapped {
