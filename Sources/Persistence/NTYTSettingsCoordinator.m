@@ -4,6 +4,7 @@
 #import "Core/NTYTRuntimeModel.h"
 #import "Core/NTYTSnapshotHolder.h"
 #import "DSL/NTYTDSLParser.h"
+#import "Debug/LogHelper.h"
 #import "NTYTSettingsStore.h"
 #import "NTYTSnapshotAssembler.h"
 #import "NTYTStoredSettings.h"
@@ -124,12 +125,19 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 
 - (void)loadInitialStateOnQueue {
     NTYTSettingsLoadResult *loadResult = [self.store load];
+
+    NTYTLog(@"[Settings] initial load state=%@",
+            NTYTSettingsLifecycleDescription(loadResult.lifecycleState));
+
     if (loadResult.lifecycleState == NTYTSettingsLifecycleStateUnusable ||
         !loadResult.rawSettings) {
         self.committedSettings = [NTYTStoredSettings emptySettings];
         self.internalLifecycleState = NTYTSettingsLifecycleStateUnusable;
         [[NTYTSnapshotHolder sharedHolder]
             publishSnapshot:[NTYTRuntimeSettingsSnapshot emptySnapshot]];
+
+        NTYTLog(@"[Settings] startup fail-open: unusable settings");
+
         return;
     }
 
@@ -142,6 +150,10 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
         self.internalLifecycleState = NTYTSettingsLifecycleStateUnusable;
         [[NTYTSnapshotHolder sharedHolder]
             publishSnapshot:[NTYTRuntimeSettingsSnapshot emptySnapshot]];
+
+        NTYTLog(@"[Settings] snapshot assembly failed: %@",
+                assemblyError.localizedDescription ?: @"<unknown>");
+
         return;
     }
 
@@ -154,7 +166,12 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     } else {
         self.internalLifecycleState = NTYTSettingsLifecycleStateSupportedValid;
     }
+
     [[NTYTSnapshotHolder sharedHolder] publishSnapshot:assembly.snapshot];
+
+    NTYTLog(@"[Settings] initial snapshot published state=%@ degraded=%@",
+            NTYTSettingsLifecycleDescription(self.internalLifecycleState),
+            assembly.hadDegradation ? @"YES" : @"NO");
 }
 
 - (NTYTSettingsLifecycleState)lifecycleState {
@@ -443,12 +460,18 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
         [NTYTSnapshotAssembler buildStrictSnapshotForSettings:candidate
                                                         error:&snapshotError];
     if (!candidateSnapshot) {
+        NTYTLog(@"[Settings] candidate snapshot build failed: %@",
+                snapshotError.localizedDescription ?: @"<unknown>");
+
         return [NTYTMutationResult failureWithCode:NTYTMutationErrorSnapshotBuild
                                            message:snapshotError.localizedDescription ?: @"The runtime snapshot could not be built."];
     }
 
     NSError *commitError = nil;
     if (![self.store commitSettings:candidate error:&commitError]) {
+        NTYTLog(@"[Settings] disk commit failed: %@",
+                commitError.localizedDescription ?: @"<unknown>");
+
         return [NTYTMutationResult failureWithCode:NTYTMutationErrorPersistence
                                            message:commitError.localizedDescription ?: @"The settings could not be saved."];
     }
@@ -456,6 +479,9 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     self.committedSettings = candidate;
     self.internalLifecycleState = NTYTSettingsLifecycleStateSupportedValid;
     [[NTYTSnapshotHolder sharedHolder] publishSnapshot:candidateSnapshot];
+
+    NTYTLog(@"[Settings] mutation committed and snapshot published");
+
     return [NTYTMutationResult successResult];
 }
 

@@ -3,10 +3,12 @@
 #import <YouTubeHeader/YTIElementRenderer.h>
 #import <YouTubeHeader/YTISectionListRenderer.h>
 
+#import "Core/NTYTContentMetadata.h"
 #import "Core/NTYTRuntimeModel.h"
 #import "Core/NTYTSnapshotHolder.h"
 #import "Evaluation/NTYTEvaluator.h"
 #import "Extraction/NTYTMetadataExtractor.h"
+#import "Debug/LogHelper.h"
 
 @interface NSObject (NTYTElementRendererAccess)
 - (nullable id)elementRenderer;
@@ -83,14 +85,31 @@ static const BOOL NTYTEmptySectionCollectionSafetyVerified = NO;
                     if (element && [self isQualifiedVideoElement:element]) {
                         NTYTMetadataExtractionResult *extraction =
                             [NTYTMetadataExtractor extractFromElementRenderer:element];
+
                         if (extraction.isSuccess && extraction.metadata) {
+                            NTYTContentMetadata *metadata = extraction.metadata;
+
                             NTYTDecision decision =
-                                [NTYTEvaluator decisionForMetadata:extraction.metadata
+                                [NTYTEvaluator decisionForMetadata:metadata
                                                           snapshot:snapshot];
+
+                            NTYTLog(@"[Filter] videoID=%@ title=%@ channelID=%@ channelName=%@ handle=%@ decision=%ld",
+                                    metadata.videoID ?: @"<unavailable>",
+                                    metadata.title ?: @"<unavailable>",
+                                    metadata.channelID ?: @"<unavailable>",
+                                    metadata.channelName ?: @"<unavailable>",
+                                    metadata.handle ?: @"<unavailable>",
+                                    (long)decision);
+
                             removeSection = decision == NTYTDecisionBlock;
+                        } else {
+                            NTYTLog(@"[Filter] extraction failure: %@",
+                                    extraction.error.localizedDescription ?: @"<unknown>");
                         }
                     }
-                } @catch (__unused NSException *sectionException) {
+                } @catch (NSException *sectionException) {
+                    NTYTLog(@"[Filter] section fail-open: %@",
+                            sectionException.reason ?: @"<unknown>");
                     removeSection = NO;
                 }
             }
@@ -107,11 +126,14 @@ static const BOOL NTYTEmptySectionCollectionSafetyVerified = NO;
         }
 
         if (filtered.count == 0 && !NTYTEmptySectionCollectionSafetyVerified) {
+            NTYTLog(@"[Filter] fail-open: filtered result would be empty");
             return originalCollection;
         }
 
         return filtered;
-    } @catch (__unused NSException *containerException) {
+    } @catch (NSException *containerException) {
+        NTYTLog(@"[Filter] container rollback: %@",
+                containerException.reason ?: @"<unknown>");
         return originalCollection;
     }
 }

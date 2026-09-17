@@ -1,5 +1,5 @@
 #import "NTYTLVSelectHelper.h"
-#import "../NTYTListEditingAdapter.h"
+#import "UI/NTYTListEditingAdapter.h"
 #import "NTYTLVDeleteFlowHelper.h"
 #import "NTYTLVPrivate.h"
 

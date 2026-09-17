@@ -3,6 +3,7 @@
 #import <objc/message.h>
 #import <objc/runtime.h>
 
+#import "Debug/LogHelper.h"
 #import "UI/NTYTCategoryViewController.h"
 #import "UI/NTYTUIStrings.h"
 
@@ -205,7 +206,12 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
 
 - (void)updateSectionForCategory:(NSInteger)category withEntry:(id)entry {
     if (category == NTYTSettingsCategory) {
-        if (!NTYTInstallSettingsSection(self, entry)) {
+        BOOL installed = NTYTInstallSettingsSection(self, entry);
+
+        NTYTLog(@"[SettingsIntegration] NTYT section install=%@",
+                installed ? @"success" : @"failed");
+
+        if (!installed) {
             %orig;
         }
         return;
@@ -281,11 +287,16 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
 
 %ctor {
     @autoreleasepool {
+        BOOL youGroupSettingsPresent = NTYTYouGroupSettingsIsPresent();
+
+        NTYTLog(@"[SettingsIntegration] ctor YouGroupSettings=%@",
+                youGroupSettingsPresent ? @"present" : @"absent");
+
         %init(NTYTNormalSettings);
         %init(NTYTGroupedPresenceBridge);
         %init(NTYTStandaloneGroupedFallback);
 
-        if (NTYTYouGroupSettingsIsPresent()) {
+        if (youGroupSettingsPresent) {
             %init(NTYTYouGroupSettingsPresent);
         }
     }

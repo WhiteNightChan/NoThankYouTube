@@ -2,7 +2,7 @@
 #import "NTYTLVDeleteFlowHelper.h"
 #import "NTYTLVPrivate.h"
 #import "NTYTLVSelectHelper.h"
-#import "../NTYTUIStrings.h"
+#import "UI/NTYTUIStrings.h"
 
 @implementation NTYTRuleListViewController (NTYTLVSetupHelper)
 
