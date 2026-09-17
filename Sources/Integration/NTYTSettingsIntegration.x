@@ -49,6 +49,34 @@ static NSArray<NSNumber *> *NTYTArrayByAddingCategoryOnce(NSArray<NSNumber *> *o
     return result;
 }
 
+static BOOL NTYTYouGroupSettingsIsPresent(void) {
+    Class groupDataClass = NSClassFromString(@"YTSettingsGroupData");
+    return groupDataClass &&
+        class_getClassMethod(groupDataClass, @selector(tweaks)) != NULL;
+}
+
+static void NTYTRegisterWithYouGroupSettingsIfAvailable(void) {
+    Class groupDataClass = NSClassFromString(@"YTSettingsGroupData");
+    SEL selector = @selector(tweaks);
+
+    if (!groupDataClass ||
+        class_getClassMethod(groupDataClass, selector) == NULL) {
+        return;
+    }
+
+    typedef id (*TweaksGetter)(id, SEL);
+    id value = ((TweaksGetter)objc_msgSend)(groupDataClass, selector);
+    if (![value isKindOfClass:[NSMutableArray class]]) {
+        return;
+    }
+
+    NSMutableArray<NSNumber *> *tweaks = value;
+    NSNumber *category = @(NTYTSettingsCategory);
+    if (![tweaks containsObject:category]) {
+        [tweaks addObject:category];
+    }
+}
+
 static UIViewController *NTYTViewControllerFromResponder(id object) {
     UIResponder *responder = [object isKindOfClass:[UIResponder class]] ? object : nil;
     while (responder) {
@@ -190,14 +218,36 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
 %end
 
 
+%group NTYTGroupedPresenceBridge
+
+%hook YTAppSettingsGroupPresentationData
+
++ (NSArray *)orderedGroups {
+    NTYTRegisterWithYouGroupSettingsIfAvailable();
+    return %orig;
+}
+
+%end
+
+%end
+
+
 %group NTYTYouGroupSettingsPresent
 
 %hook YTSettingsGroupData
 
 + (NSMutableArray<NSNumber *> *)tweaks {
-    NSArray<NSNumber *> *original = %orig;
-    NSArray<NSNumber *> *registered = NTYTArrayByAddingCategoryOnce(original);
-    return [registered mutableCopy];
+    NSMutableArray<NSNumber *> *tweaks = %orig;
+    if (![tweaks isKindOfClass:[NSMutableArray class]]) {
+        return tweaks;
+    }
+
+    NSNumber *category = @(NTYTSettingsCategory);
+    if (![tweaks containsObject:category]) {
+        [tweaks addObject:category];
+    }
+
+    return tweaks;
 }
 
 %end
@@ -211,9 +261,16 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
 
 - (NSArray<NSNumber *> *)orderedCategories {
     NSArray<NSNumber *> *original = %orig;
+
+    if (NTYTYouGroupSettingsIsPresent()) {
+        NTYTRegisterWithYouGroupSettingsIfAvailable();
+        return original;
+    }
+
     if (self.type != 1) {
         return original;
     }
+
     return NTYTArrayByAddingCategoryOnce(original);
 }
 
@@ -225,14 +282,11 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
 %ctor {
     @autoreleasepool {
         %init(NTYTNormalSettings);
+        %init(NTYTGroupedPresenceBridge);
+        %init(NTYTStandaloneGroupedFallback);
 
-        Class groupDataClass = NSClassFromString(@"YTSettingsGroupData");
-        BOOL youGroupSettingsPresent = groupDataClass &&
-            class_getClassMethod(groupDataClass, @selector(tweaks)) != NULL;
-        if (youGroupSettingsPresent) {
+        if (NTYTYouGroupSettingsIsPresent()) {
             %init(NTYTYouGroupSettingsPresent);
-        } else {
-            %init(NTYTStandaloneGroupedFallback);
         }
     }
 }
