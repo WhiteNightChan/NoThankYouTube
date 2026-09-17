@@ -10,7 +10,7 @@ FOUNDATION_EXPORT NSString *NTYTOptionTitle(NTYTListOptionID optionID);
 FOUNDATION_EXPORT NSString *NTYTAddTitle(void);
 FOUNDATION_EXPORT NSString *NTYTEditTitle(void);
 FOUNDATION_EXPORT NSString *NTYTDeleteTitle(NSUInteger count);
-FOUNDATION_EXPORT NSString *NTYTDeleteMessage(NSUInteger count, nullable NSString *expression);
+FOUNDATION_EXPORT NSString *NTYTDeleteMessage(NSUInteger count, NSString * _Nullable expression);
 FOUNDATION_EXPORT NSString *NTYTSearchPlaceholder(void);
 FOUNDATION_EXPORT NSString *NTYTInputMessage(void);
 FOUNDATION_EXPORT NSString *NTYTInputPlaceholder(void);

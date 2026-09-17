@@ -1,5 +1,7 @@
 #import "NTYTRuleListViewController.h"
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface NTYTRuleListViewController (NTYTLVSetupHelper)
 - (void)configureTableViewAppearance;
 - (UISearchBar *)configuredSearchBar;
@@ -15,3 +17,5 @@
 - (UIBarButtonItem *)editBarButtonItemForEditing:(BOOL)editing;
 - (void)configureToolbarItems;
 @end
+
+NS_ASSUME_NONNULL_END
