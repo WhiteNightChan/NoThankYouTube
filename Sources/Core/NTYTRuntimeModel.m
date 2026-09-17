@@ -129,19 +129,8 @@
     return self;
 }
 
-- (NTYTRuntimeListState *)stateForListID:(NTYTListID)listID {
-    NTYTRuntimeListState *state = self.listStates[@(listID)];
-    if (state) {
-        return state;
-    }
-
-    NTYTListDefinition *definition =
-        [NTYTListDefinition definitionForListID:listID];
-    NTYTMatchOptions *options = definition.defaultOptions ?:
-        [[NTYTMatchOptions alloc] initWithCaseSensitive:NO exactMatch:NO];
-    return [[NTYTRuntimeListState alloc] initWithListID:listID
-                                                options:options
-                                                  rules:@[]];
+- (nullable NTYTRuntimeListState *)stateForListID:(NTYTListID)listID {
+    return self.listStates[@(listID)];
 }
 
 + (instancetype)emptySnapshot {

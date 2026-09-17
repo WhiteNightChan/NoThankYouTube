@@ -13,6 +13,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (instancetype)plainMatcherWithText:(NSString *)text;
 + (instancetype)regexMatcherWithExpression:(NSRegularExpression *)regularExpression;
+- (instancetype)init NS_UNAVAILABLE;
 
 @end
 
@@ -37,6 +38,7 @@ NS_ASSUME_NONNULL_BEGIN
                                 negative:(BOOL)negative
                        matcherExpression:(NTYTMatcherExpression *)matcherExpression;
 + (instancetype)videoModifierNegative:(BOOL)negative;
+- (instancetype)init NS_UNAVAILABLE;
 
 @end
 
@@ -72,7 +74,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)initWithListStates:(NSDictionary<NSNumber *, NTYTRuntimeListState *> *)listStates NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
-- (NTYTRuntimeListState *)stateForListID:(NTYTListID)listID;
+- (nullable NTYTRuntimeListState *)stateForListID:(NTYTListID)listID;
 + (instancetype)emptySnapshot;
 
 @end

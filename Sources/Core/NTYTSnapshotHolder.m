@@ -6,6 +6,8 @@
 
 @property(nonatomic, strong) NTYTRuntimeSettingsSnapshot *snapshot;
 
+- (instancetype)initPrivate;
+
 @end
 
 @implementation NTYTSnapshotHolder
