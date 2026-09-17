@@ -261,7 +261,12 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
             *degraded = YES;
             continue;
         }
-        valid[optionID] = @([(NSNumber *)value boolValue]);
+
+        BOOL overrideValue = [(NSNumber *)value boolValue];
+        NTYTListOptionID typedOptionID = (NTYTListOptionID)optionID.integerValue;
+        if (overrideValue != [definition defaultValueForOption:typedOptionID]) {
+            valid[optionID] = @(overrideValue);
+        }
     }
     return valid;
 }
