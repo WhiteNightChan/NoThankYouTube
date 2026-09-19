@@ -40,8 +40,14 @@
                                             message:[message stringByAppendingString:spacer]
                                      preferredStyle:UIAlertControllerStyleAlert];
     UIFont *font = [UIFont systemFontOfSize:14.0];
+
+    CGFloat inputY = diagnostic.length > 0 ? 88.0 : 70.0;
+
     UITextView *input =
-        [self configuredInputTextViewWithFrame:CGRectMake(10, 88, 250, font.lineHeight * 9 + 12)];
+        [self configuredInputTextViewWithFrame:CGRectMake(
+            10, inputY, 250, font.lineHeight * 9 + 12
+        )];
+    
     if (draft != nil) {
         input.text = draft;
         input.textColor = UIColor.labelColor;
