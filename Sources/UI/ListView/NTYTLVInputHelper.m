@@ -40,13 +40,40 @@
                                             message:[message stringByAppendingString:spacer]
                                      preferredStyle:UIAlertControllerStyleAlert];
     UIFont *font = [UIFont systemFontOfSize:14.0];
+    UIFont *messageFont = [UIFont systemFontOfSize:13.0];
 
-    CGFloat inputY = diagnostic.length > 0 ? 88.0 : 70.0;
+    NSDictionary *messageAttributes = @{
+        NSFontAttributeName: messageFont
+    };
+    CGSize messageConstraint = CGSizeMake(238.0, CGFLOAT_MAX);
+
+    CGRect baseMessageRect =
+        [NTYTInputMessage() boundingRectWithSize:messageConstraint
+                                        options:NSStringDrawingUsesLineFragmentOrigin |
+                                                NSStringDrawingUsesFontLeading
+                                     attributes:messageAttributes
+                                        context:nil];
+
+    CGRect actualMessageRect =
+        [message boundingRectWithSize:messageConstraint
+                              options:NSStringDrawingUsesLineFragmentOrigin |
+                                      NSStringDrawingUsesFontLeading
+                           attributes:messageAttributes
+                              context:nil];
+
+    CGFloat extraMessageHeight =
+        MAX(0.0,
+            ceil(CGRectGetHeight(actualMessageRect)) -
+            ceil(CGRectGetHeight(baseMessageRect)));
+
+    CGFloat inputY = 70.0 + extraMessageHeight;
 
     UITextView *input =
         [self configuredInputTextViewWithFrame:CGRectMake(
-            10, inputY, 250, font.lineHeight * 9 + 12
-        )];
+            10,
+            inputY,
+            250,
+            font.lineHeight * 9 + 12)];
     
     if (draft != nil) {
         input.text = draft;
