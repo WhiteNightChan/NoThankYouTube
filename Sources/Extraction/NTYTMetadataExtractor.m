@@ -55,6 +55,14 @@ static NSString *NTYTExactlyOneString(NSArray<NSString *> *strings, BOOL require
     return value;
 }
 
+static NSString *NTYTSemanticHandleFromSourceString(NSString *source) {
+    if ([source hasPrefix:@"/@"]) {
+        return [source substringFromIndex:1];
+    }
+
+    return source;
+}
+
 @interface NTYTMetadataExtractionResult ()
 
 @property(nonatomic, readwrite, getter=isSuccess) BOOL success;
@@ -184,11 +192,13 @@ static NSString *NTYTExactlyOneString(NSArray<NSString *> *strings, BOOL require
                                                     inMessage:candidate
                                                          error:nil],
                 YES);
-            handle = NTYTExactlyOneString(
+
+            NSString *sourceHandle = NTYTExactlyOneString(
                 [NTYTProtobufReader UTF8StringsForDirectField:4
                                                     inMessage:candidate
                                                          error:nil],
                 YES);
+            handle = NTYTSemanticHandleFromSourceString(sourceHandle);
         }
 
         NTYTContentMetadata *metadata =
