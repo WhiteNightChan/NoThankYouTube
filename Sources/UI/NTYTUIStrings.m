@@ -3,19 +3,19 @@
 NSString *NTYTListTitle(NTYTListID listID) {
     switch (listID) {
         case NTYTListIDGeneralBlock:
-            return @"Block content that include";
+            return @"Block";
         case NTYTListIDGeneralAllow:
-            return @"Do not block content that include";
+            return @"Allow";
         case NTYTListIDVideosTitle:
-            return @"Block videos that title include";
+            return @"Title";
         case NTYTListIDVideosChannel:
-            return @"Block videos from these channels";
+            return @"Channel";
         case NTYTListIDVideosID:
-            return @"Block videos by ID";
+            return @"Video ID";
         case NTYTListIDChannelsBlock:
-            return @"Block any content from these channels";
+            return @"Block";
         case NTYTListIDChannelsAllow:
-            return @"Whitelist channels";
+            return @"Allow";
     }
     return @"Rules";
 }
