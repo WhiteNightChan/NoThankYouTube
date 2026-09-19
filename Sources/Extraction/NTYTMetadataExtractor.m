@@ -22,9 +22,21 @@ static NSArray<NSNumber *> *NTYTPrimaryVideoPath(void) {
              @98150882, @1, @66439850, @1, @66441155, @3, @73080600];
 }
 
-static NSArray<NSNumber *> *NTYTRichMetadataPath(void) {
+static NSArray<NSNumber *> *NTYTRichMetadataVariantAPath(void) {
     return @[@1, @168777401, @5, @232954548, @18, @4, @169495254,
              @462702848, @1, @200453700, @1, @48687757];
+}
+
+static NSArray<NSNumber *> *NTYTRichMetadataVariantBPath(void) {
+    return @[@1, @168777401, @5, @232954548, @18, @4, @169495254,
+             @462702848, @1, @48687757];
+}
+
+static NSArray<NSArray<NSNumber *> *> *NTYTRichMetadataPaths(void) {
+    return @[
+        NTYTRichMetadataVariantAPath(),
+        NTYTRichMetadataVariantBPath(),
+    ];
 }
 
 static NSArray<NSNumber *> *NTYTChannelMetadataPath(void) {
@@ -127,19 +139,21 @@ static NSString *NTYTExactlyOneString(NSArray<NSString *> *strings, BOOL require
         NSString *title = nil;
         NSString *channelName = nil;
         if (resolvedVideoID) {
-            NSArray<NSData *> *richCandidates =
-                [NTYTProtobufReader messagesAtPath:NTYTRichMetadataPath()
-                                            inData:data
-                                             error:nil];
             NSMutableArray<NSData *> *matchingCandidates = [NSMutableArray array];
-            for (NSData *candidate in richCandidates ?: @[]) {
-                NSArray<NSString *> *candidateIDs =
-                    [NTYTProtobufReader UTF8StringsForDirectField:1
-                                                        inMessage:candidate
-                                                             error:nil];
-                NSString *candidateID = NTYTExactlyOneString(candidateIDs, YES);
-                if (candidateID && [candidateID isEqualToString:resolvedVideoID]) {
-                    [matchingCandidates addObject:candidate];
+            for (NSArray<NSNumber *> *richPath in NTYTRichMetadataPaths()) {
+                NSArray<NSData *> *richCandidates =
+                    [NTYTProtobufReader messagesAtPath:richPath
+                                                inData:data
+                                                 error:nil];
+                for (NSData *candidate in richCandidates ?: @[]) {
+                    NSArray<NSString *> *candidateIDs =
+                        [NTYTProtobufReader UTF8StringsForDirectField:1
+                                                            inMessage:candidate
+                                                                 error:nil];
+                    NSString *candidateID = NTYTExactlyOneString(candidateIDs, YES);
+                    if (candidateID && [candidateID isEqualToString:resolvedVideoID]) {
+                        [matchingCandidates addObject:candidate];
+                    }
                 }
             }
             if (matchingCandidates.count == 1) {
