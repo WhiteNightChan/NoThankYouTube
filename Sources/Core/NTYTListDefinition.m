@@ -1,0 +1,140 @@
+#import "NTYTListDefinition.h"
+
+@implementation NTYTMatchOptions
+
+- (instancetype)initWithCaseSensitive:(BOOL)caseSensitive
+                            exactMatch:(BOOL)exactMatch {
+    self = [super init];
+    if (self) {
+        _caseSensitive = caseSensitive;
+        _exactMatch = exactMatch;
+    }
+    return self;
+}
+
+- (id)copyWithZone:(NSZone *)zone {
+    return self;
+}
+
+@end
+
+@interface NTYTListDefinition ()
+
+- (instancetype)initWithListID:(NTYTListID)listID
+                      listKind:(NTYTListKind)listKind
+                    targetKind:(NTYTTargetKind)targetKind
+                   storagePath:(NSArray<NSString *> *)storagePath
+              supportedOptions:(NSSet<NSNumber *> *)supportedOptions
+                defaultOptions:(NTYTMatchOptions *)defaultOptions;
+
+@end
+
+@implementation NTYTListDefinition
+
+- (instancetype)initWithListID:(NTYTListID)listID
+                      listKind:(NTYTListKind)listKind
+                    targetKind:(NTYTTargetKind)targetKind
+                   storagePath:(NSArray<NSString *> *)storagePath
+              supportedOptions:(NSSet<NSNumber *> *)supportedOptions
+                defaultOptions:(NTYTMatchOptions *)defaultOptions {
+    self = [super init];
+    if (self) {
+        _listID = listID;
+        _listKind = listKind;
+        _targetKind = targetKind;
+        _storagePath = [storagePath copy];
+        _supportedOptions = [supportedOptions copy];
+        _defaultOptions = defaultOptions;
+    }
+    return self;
+}
+
+- (BOOL)supportsOption:(NTYTListOptionID)optionID {
+    return [self.supportedOptions containsObject:@(optionID)];
+}
+
+- (BOOL)defaultValueForOption:(NTYTListOptionID)optionID {
+    switch (optionID) {
+        case NTYTListOptionIDCaseSensitive:
+            return self.defaultOptions.caseSensitive;
+        case NTYTListOptionIDExactMatch:
+            return self.defaultOptions.exactMatch;
+    }
+    return NO;
+}
+
++ (NSArray<NTYTListDefinition *> *)allDefinitions {
+    static NSArray<NTYTListDefinition *> *definitions;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSSet<NSNumber *> *plainOptions = [NSSet setWithArray:@[
+            @(NTYTListOptionIDCaseSensitive),
+            @(NTYTListOptionIDExactMatch),
+        ]];
+        NSSet<NSNumber *> *noOptions = [NSSet set];
+
+        NTYTMatchOptions *offOff =
+            [[NTYTMatchOptions alloc] initWithCaseSensitive:NO exactMatch:NO];
+        NTYTMatchOptions *offOn =
+            [[NTYTMatchOptions alloc] initWithCaseSensitive:NO exactMatch:YES];
+        NTYTMatchOptions *onOn =
+            [[NTYTMatchOptions alloc] initWithCaseSensitive:YES exactMatch:YES];
+
+        definitions = @[
+            [[self alloc] initWithListID:NTYTListIDGeneralBlock
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindTitle
+                             storagePath:@[@"general", @"block"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOff],
+            [[self alloc] initWithListID:NTYTListIDGeneralAllow
+                                listKind:NTYTListKindAllow
+                              targetKind:NTYTTargetKindTitle
+                             storagePath:@[@"general", @"allow"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOff],
+            [[self alloc] initWithListID:NTYTListIDVideosTitle
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindTitle
+                             storagePath:@[@"videos", @"title"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOff],
+            [[self alloc] initWithListID:NTYTListIDVideosChannel
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindChannel
+                             storagePath:@[@"videos", @"channel"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOn],
+            [[self alloc] initWithListID:NTYTListIDVideosID
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindVideoID
+                             storagePath:@[@"videos", @"id"]
+                        supportedOptions:noOptions
+                          defaultOptions:onOn],
+            [[self alloc] initWithListID:NTYTListIDChannelsBlock
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindChannel
+                             storagePath:@[@"channels", @"block"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOn],
+            [[self alloc] initWithListID:NTYTListIDChannelsAllow
+                                listKind:NTYTListKindAllow
+                              targetKind:NTYTTargetKindChannel
+                             storagePath:@[@"channels", @"allow"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOn],
+        ];
+    });
+    return definitions;
+}
+
++ (NTYTListDefinition *)definitionForListID:(NTYTListID)listID {
+    for (NTYTListDefinition *definition in self.allDefinitions) {
+        if (definition.listID == listID) {
+            return definition;
+        }
+    }
+    return nil;
+}
+
+@end
