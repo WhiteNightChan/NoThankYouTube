@@ -80,7 +80,15 @@
 }
 
 + (instancetype)videoModifierNegative:(BOOL)negative {
-    return [[self alloc] initWithKind:NTYTModifierKindVideo
+    return [self predicateModifierWithKind:NTYTModifierKindVideo negative:negative];
+}
+
++ (instancetype)predicateModifierWithKind:(NTYTModifierKind)kind
+                                  negative:(BOOL)negative {
+    NSParameterAssert(kind == NTYTModifierKindVideo ||
+                      kind == NTYTModifierKindPost ||
+                      kind == NTYTModifierKindPlaylist);
+    return [[self alloc] initWithKind:kind
                             negative:negative
                    matcherExpression:nil];
 }
@@ -121,10 +129,12 @@
 
 @implementation NTYTRuntimeSettingsSnapshot
 
-- (instancetype)initWithListStates:(NSDictionary<NSNumber *,NTYTRuntimeListState *> *)listStates {
+- (instancetype)initWithListStates:(NSDictionary<NSNumber *,NTYTRuntimeListState *> *)listStates
+                            hideMix:(BOOL)hideMix {
     self = [super init];
     if (self) {
         _listStates = [listStates copy];
+        _hideMix = hideMix;
     }
     return self;
 }
@@ -142,7 +152,7 @@
                                                  options:definition.defaultOptions
                                                    rules:@[]];
     }
-    return [[self alloc] initWithListStates:states];
+    return [[self alloc] initWithListStates:states hideMix:NO];
 }
 
 @end

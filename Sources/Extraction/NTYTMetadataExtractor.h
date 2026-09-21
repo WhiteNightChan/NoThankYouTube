@@ -1,5 +1,7 @@
 #import <Foundation/Foundation.h>
 
+#import "Core/NTYTTypes.h"
+
 @class NTYTContentMetadata;
 @class YTIElementRenderer;
 
@@ -18,7 +20,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface NTYTMetadataExtractor : NSObject
 
-+ (NTYTMetadataExtractionResult *)extractFromElementRenderer:(YTIElementRenderer *)elementRenderer;
++ (NTYTMetadataExtractionResult *)extractFromElementRenderer:(YTIElementRenderer *)elementRenderer
+                                        qualifiedContentType:(NTYTContentType)contentType;
 
 @end
 

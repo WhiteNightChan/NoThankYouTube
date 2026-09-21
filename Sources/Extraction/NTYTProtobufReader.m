@@ -246,4 +246,69 @@ static BOOL NTYTSkipWireValue(const uint8_t *bytes,
     return strings;
 }
 
++ (NSArray<NSNumber *> *)varintValuesForField:(uint32_t)fieldNumber
+                                        inData:(NSData *)data
+                                         error:(NSError **)error {
+    if (![data isKindOfClass:[NSData class]] ||
+        fieldNumber == 0 || fieldNumber > NTYTMaximumProtobufFieldNumber) {
+        if (error) {
+            *error = NTYTProtoError(9, @"The protobuf varint request is invalid.");
+        }
+        return nil;
+    }
+
+    const uint8_t *bytes = data.bytes;
+    NSUInteger length = data.length;
+    NSUInteger offset = 0;
+    NSMutableArray<NSNumber *> *values = [NSMutableArray array];
+
+    while (offset < length) {
+        uint64_t tag = 0;
+        if (!NTYTReadVarint(bytes, length, &offset, &tag) || tag == 0) {
+            if (error) {
+                *error = NTYTProtoError(10, @"A protobuf tag is malformed.");
+            }
+            return nil;
+        }
+
+        uint64_t fieldValue = tag >> 3;
+        uint8_t wireType = (uint8_t)(tag & 0x07);
+        if (fieldValue == 0 ||
+            fieldValue > NTYTMaximumProtobufFieldNumber ||
+            wireType == 4) {
+            if (error) {
+                *error = NTYTProtoError(11, @"A protobuf field is invalid in this message context.");
+            }
+            return nil;
+        }
+
+        if (wireType == 0) {
+            uint64_t value = 0;
+            if (!NTYTReadVarint(bytes, length, &offset, &value)) {
+                if (error) {
+                    *error = NTYTProtoError(12, @"A protobuf varint is malformed.");
+                }
+                return nil;
+            }
+            if ((uint32_t)fieldValue == fieldNumber) {
+                [values addObject:@(value)];
+            }
+            continue;
+        }
+
+        if (!NTYTSkipWireValue(bytes,
+                               length,
+                               &offset,
+                               (uint32_t)fieldValue,
+                               wireType)) {
+            if (error) {
+                *error = NTYTProtoError(13, @"A protobuf wire value is malformed or unsupported.");
+            }
+            return nil;
+        }
+    }
+
+    return values;
+}
+
 @end

@@ -8,6 +8,7 @@
 #import "Core/NTYTSnapshotHolder.h"
 #import "Evaluation/NTYTEvaluator.h"
 #import "Extraction/NTYTMetadataExtractor.h"
+#import "NTYTContentQualifier.h"
 #import "Debug/LogHelper.h"
 
 @interface NSObject (NTYTElementRendererAccess)
@@ -19,11 +20,19 @@
 - (void)setContentsArray:(NSMutableArray *)contentsArray;
 @end
 
-@interface YTIElementRendererCompatibilityOptions (NTYTProduction)
-- (BOOL)useVideoCellControllerOnIos;
-@end
-
 static const BOOL NTYTEmptySectionCollectionSafetyVerified = NO;
+
+static NSString *NTYTMetadataLogValue(NTYTMetadataValue *metadataValue) {
+    switch (metadataValue.state) {
+        case NTYTMetadataValueStateAvailable:
+            return metadataValue.value ?: @"<available:nil>";
+        case NTYTMetadataValueStateAbsent:
+            return @"<absent>";
+        case NTYTMetadataValueStateUnavailable:
+            return @"<unavailable>";
+    }
+    return @"<invalid>";
+}
 
 @implementation NTYTProductionFilter
 
@@ -45,41 +54,26 @@ static const BOOL NTYTEmptySectionCollectionSafetyVerified = NO;
     return (YTIElementRenderer *)element;
 }
 
-+ (BOOL)isQualifiedVideoElement:(YTIElementRenderer *)element {
-    if ([element respondsToSelector:@selector(hasCompatibilityOptions)] &&
-        ![element hasCompatibilityOptions]) {
-        NTYTLog(@"[FilterDiag] keep child: hasCompatibilityOptions=NO");
-        return NO;
-    }
-
-    id options = [element compatibilityOptions];
-    if (!options || ![options respondsToSelector:@selector(useVideoCellControllerOnIos)]) {
-        NTYTLog(@"[FilterDiag] keep child: compatibilityOptions=%@ video selector unavailable",
-                options ? NSStringFromClass([options class]) : @"<nil>");
-        return NO;
-    }
-
-    BOOL qualified =
-        [(YTIElementRendererCompatibilityOptions *)options useVideoCellControllerOnIos];
-
-    if (!qualified) {
-        NTYTLog(@"[FilterDiag] keep child: useVideoCellControllerOnIos=NO");
-    }
-
-    return qualified;
-}
-
 + (BOOL)shouldRemoveContentEntry:(id)entry
                         snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot
                       childIndex:(NSUInteger)childIndex {
     @try {
         YTIElementRenderer *element = [self elementRendererFromContentEntry:entry];
-        if (!element || ![self isQualifiedVideoElement:element]) {
+        if (!element) {
+            return NO;
+        }
+
+        NTYTContentType contentType =
+            [NTYTContentQualifier qualifiedContentTypeForElementRenderer:element];
+        if (contentType == NTYTContentTypeUnresolved) {
+            NTYTLog(@"[FilterDiag] keep child=%lu: qualification unresolved",
+                    (unsigned long)childIndex);
             return NO;
         }
 
         NTYTMetadataExtractionResult *extraction =
-            [NTYTMetadataExtractor extractFromElementRenderer:element];
+            [NTYTMetadataExtractor extractFromElementRenderer:element
+                                         qualifiedContentType:contentType];
 
         if (!extraction.isSuccess || !extraction.metadata) {
             NTYTLog(@"[Filter] child=%lu extraction failure: %@",
@@ -92,13 +86,16 @@ static const BOOL NTYTEmptySectionCollectionSafetyVerified = NO;
         NTYTDecision decision =
             [NTYTEvaluator decisionForMetadata:metadata snapshot:snapshot];
 
-        NTYTLog(@"[Filter] child=%lu videoID=%@ title=%@ channelID=%@ channelName=%@ handle=%@ decision=%ld",
+        NTYTLog(@"[Filter] child=%lu type=%ld videoID=%@ title=%@ postBody=%@ playlistID=%@ channelID=%@ channelName=%@ handle=%@ decision=%ld",
                 (unsigned long)childIndex,
-                metadata.videoID ?: @"<unavailable>",
-                metadata.title ?: @"<unavailable>",
-                metadata.channelID ?: @"<unavailable>",
-                metadata.channelName ?: @"<unavailable>",
-                metadata.handle ?: @"<unavailable>",
+                (long)metadata.contentType,
+                NTYTMetadataLogValue(metadata.videoID),
+                NTYTMetadataLogValue(metadata.title),
+                NTYTMetadataLogValue(metadata.postBody),
+                NTYTMetadataLogValue(metadata.playlistID),
+                NTYTMetadataLogValue(metadata.channelID),
+                NTYTMetadataLogValue(metadata.channelName),
+                NTYTMetadataLogValue(metadata.handle),
                 (long)decision);
 
         return decision == NTYTDecisionBlock;
@@ -126,7 +123,9 @@ matchesRetainedChildren:(NSArray *)expected {
 }
 
 + (nullable YTIItemSectionRenderer *)copiedSectionFromSection:(YTIItemSectionRenderer *)section
-                                             retainedChildren:(NSMutableArray *)retainedChildren {
+                                             retainedChildren:(NSMutableArray *)retainedChildren
+                                             originalContents:(NSArray *)originalContents
+                                     originalChildrenSnapshot:(NSArray *)originalChildrenSnapshot {
     if (![section respondsToSelector:@selector(copyWithZone:)] ||
         ![section respondsToSelector:@selector(setContentsArray:)]) {
         NTYTLog(@"[Filter] section copy fail-open: copy/setter capability unavailable");
@@ -153,8 +152,15 @@ matchesRetainedChildren:(NSArray *)expected {
 
     [copiedSection setContentsArray:retainedChildren];
 
+    id originalContentsAfterCommit = [section contentsArray];
     id committedContentsValue = [copiedSection contentsArray];
-    if (![committedContentsValue isKindOfClass:[NSArray class]] ||
+    if (originalContentsAfterCommit != originalContents ||
+        ![originalContentsAfterCommit isKindOfClass:[NSArray class]] ||
+        ![self contentsArray:(NSArray *)originalContentsAfterCommit
+      matchesRetainedChildren:originalChildrenSnapshot] ||
+        retainedChildren == originalContents ||
+        ![committedContentsValue isKindOfClass:[NSArray class]] ||
+        committedContentsValue == originalContents ||
         ![self contentsArray:(NSArray *)committedContentsValue
       matchesRetainedChildren:retainedChildren]) {
         NTYTLog(@"[Filter] section copy fail-open: replacement postcondition failed");
@@ -181,6 +187,7 @@ matchesRetainedChildren:(NSArray *)expected {
 
     NSMutableArray *retainedChildren =
         [NSMutableArray arrayWithCapacity:contents.count];
+    NSArray *originalChildrenSnapshot = [contents copy];
     BOOL removedAnyChild = NO;
     NSUInteger childIndex = 0;
 
@@ -211,7 +218,9 @@ matchesRetainedChildren:(NSArray *)expected {
 
     YTIItemSectionRenderer *copiedSection =
         [self copiedSectionFromSection:section
-                      retainedChildren:retainedChildren];
+                      retainedChildren:retainedChildren
+                      originalContents:contents
+              originalChildrenSnapshot:originalChildrenSnapshot];
 
     if (!copiedSection) {
         return section;

@@ -96,7 +96,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         }
         NTYTRawSettings *raw = [[NTYTRawSettings alloc] initWithAbsent:YES
                                                          baseDegraded:NO
-                                                                lists:emptyLists];
+                                                                lists:emptyLists
+                                                              hideMix:NO];
         return [[NTYTSettingsLoadResult alloc]
             initWithLifecycleState:NTYTSettingsLifecycleStateAbsent
                        rawSettings:raw
@@ -138,6 +139,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     __block BOOL degraded = NO;
     NSSet *allowedRootKeys = [NSSet setWithArray:@[
         @"schemaVersion", @"syntaxVersion", @"general", @"videos", @"channels",
+        @"posts", @"playlists", @"global",
     ]];
     for (id key in root) {
         if (![key isKindOfClass:[NSString class]] || ![allowedRootKeys containsObject:key]) {
@@ -149,6 +151,9 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         @"general": [NSSet setWithArray:@[@"block", @"allow"]],
         @"videos": [NSSet setWithArray:@[@"title", @"channel", @"id"]],
         @"channels": [NSSet setWithArray:@[@"block", @"allow"]],
+        @"posts": [NSSet setWithArray:@[@"content", @"channel"]],
+        @"playlists": [NSSet setWithArray:@[@"options", @"title", @"channel", @"id"]],
+        @"global": [NSSet setWithArray:@[@"block", @"allow"]],
     };
     [allowedSectionKeys enumerateKeysAndObjectsUsingBlock:^(NSString *sectionKey,
                                                             NSSet<NSString *> *allowed,
@@ -167,6 +172,28 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
             }
         }
     }];
+
+    BOOL hideMix = NO;
+    id playlistsObject = root[@"playlists"];
+    if ([playlistsObject isKindOfClass:[NSDictionary class]]) {
+        id playlistOptionsObject = ((NSDictionary *)playlistsObject)[@"options"];
+        if (playlistOptionsObject) {
+            if (![playlistOptionsObject isKindOfClass:[NSDictionary class]]) {
+                degraded = YES;
+            } else {
+                NSDictionary *playlistOptions = (NSDictionary *)playlistOptionsObject;
+                for (id key in playlistOptions) {
+                    if (![key isKindOfClass:[NSString class]] ||
+                        ![(NSString *)key isEqualToString:@"hideMix"] ||
+                        !NTYTIsPropertyListBoolean(playlistOptions[key])) {
+                        degraded = YES;
+                        continue;
+                    }
+                    hideMix = [playlistOptions[key] boolValue];
+                }
+            }
+        }
+    }
 
     NSMutableDictionary<NSNumber *, NTYTRawList *> *rawLists = [NSMutableDictionary dictionary];
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
@@ -204,7 +231,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     NTYTRawSettings *rawSettings =
         [[NTYTRawSettings alloc] initWithAbsent:NO
                                    baseDegraded:degraded
-                                          lists:rawLists];
+                                          lists:rawLists
+                                        hideMix:hideMix];
     NTYTSettingsLifecycleState state = degraded
         ? NTYTSettingsLifecycleStateSupportedDegraded
         : NTYTSettingsLifecycleStateSupportedValid;
@@ -350,9 +378,6 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     NSMutableDictionary *root = [@{
         @"schemaVersion": @1,
         @"syntaxVersion": @1,
-        @"general": [NSMutableDictionary dictionary],
-        @"videos": [NSMutableDictionary dictionary],
-        @"channels": [NSMutableDictionary dictionary],
     } mutableCopy];
 
     NSDictionary<NSNumber *, NSString *> *optionKeys = @{
@@ -361,6 +386,9 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     };
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
         NTYTStoredList *storedList = [settings listForID:definition.listID];
+        if (storedList.optionOverrides.count == 0 && storedList.rules.count == 0) {
+            continue;
+        }
         NSMutableDictionary *listDictionary = [NSMutableDictionary dictionary];
 
         if (storedList.optionOverrides.count > 0) {
@@ -378,17 +406,32 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
             }
         }
 
-        NSMutableArray *rules = [NSMutableArray arrayWithCapacity:storedList.rules.count];
-        for (NTYTStoredRule *rule in storedList.rules) {
-            [rules addObject:@{
-                @"id": rule.identifier.UUIDString,
-                @"expression": rule.expression,
-            }];
+        if (storedList.rules.count > 0) {
+            NSMutableArray *rules = [NSMutableArray arrayWithCapacity:storedList.rules.count];
+            for (NTYTStoredRule *rule in storedList.rules) {
+                [rules addObject:@{
+                    @"id": rule.identifier.UUIDString,
+                    @"expression": rule.expression,
+                }];
+            }
+            listDictionary[@"rules"] = rules;
         }
-        listDictionary[@"rules"] = rules;
 
         NSMutableDictionary *section = root[definition.storagePath[0]];
+        if (!section) {
+            section = [NSMutableDictionary dictionary];
+            root[definition.storagePath[0]] = section;
+        }
         section[definition.storagePath[1]] = listDictionary;
+    }
+
+    if (settings.hideMix) {
+        NSMutableDictionary *playlists = root[@"playlists"];
+        if (!playlists) {
+            playlists = [NSMutableDictionary dictionary];
+            root[@"playlists"] = playlists;
+        }
+        playlists[@"options"] = [@{@"hideMix": @YES} mutableCopy];
     }
     return root;
 }

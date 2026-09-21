@@ -1,7 +1,7 @@
 Package: com.whitenightchan.nothankyoutube
 Name: NoThankYouTube
 Description: Customize YouTube to show only the elements you want to see.
-Version: 1.0.0
+Version: 1.1.0
 Architecture: iphoneos-arm
 Maintainer: WhiteNightChan
 Author: WhiteNightChan

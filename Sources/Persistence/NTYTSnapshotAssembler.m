@@ -143,9 +143,11 @@ static NSError *NTYTAssemblyError(NSString *message) {
         }
 
         NTYTStoredSettings *acceptedSettings =
-            [[NTYTStoredSettings alloc] initWithLists:storedLists];
+            [[NTYTStoredSettings alloc] initWithLists:storedLists
+                                              hideMix:rawSettings.hideMix];
         NTYTRuntimeSettingsSnapshot *snapshot =
-            [[NTYTRuntimeSettingsSnapshot alloc] initWithListStates:runtimeLists];
+            [[NTYTRuntimeSettingsSnapshot alloc] initWithListStates:runtimeLists
+                                                            hideMix:rawSettings.hideMix];
         return [[NTYTSnapshotAssemblyResult alloc]
             initWithAcceptedSettings:acceptedSettings
                              snapshot:snapshot
@@ -183,7 +185,8 @@ static NSError *NTYTAssemblyError(NSString *message) {
 
     NTYTRawSettings *raw = [[NTYTRawSettings alloc] initWithAbsent:NO
                                                      baseDegraded:NO
-                                                            lists:rawLists];
+                                                            lists:rawLists
+                                                          hideMix:settings.hideMix];
     NSError *assemblyError = nil;
     NTYTSnapshotAssemblyResult *result = [self assembleRawSettings:raw error:&assemblyError];
     if (!result || result.hadDegradation) {

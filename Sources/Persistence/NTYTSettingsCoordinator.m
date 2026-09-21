@@ -73,6 +73,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 - (NTYTMutationResult *)commitCandidateSettingsOnQueue:(NTYTStoredSettings *)candidate;
 - (NTYTStoredSettings *)settingsByReplacingList:(NTYTStoredList *)list
                                           listID:(NTYTListID)listID;
+- (NTYTStoredSettings *)settingsByReplacingHideMix:(BOOL)hideMix;
 - (NSUInteger)findRuleID:(NSUUID *)ruleID inRules:(NSArray<NTYTStoredRule *> *)rules;
 - (BOOL)rules:(NSArray<NTYTStoredRule *> *)rules
     containExpressionDuplicate:(NSString *)expression
@@ -216,6 +217,14 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
         value = override ? override.boolValue : [definition defaultValueForOption:optionID];
     }];
     return value;
+}
+
+- (BOOL)hideMixEnabled {
+    __block BOOL enabled = NO;
+    [self performSynchronous:^{
+        enabled = self.committedSettings.hideMix;
+    }];
+    return enabled;
 }
 
 - (NTYTMutationResult *)addExpression:(NSString *)rawExpression listID:(NTYTListID)listID {
@@ -454,6 +463,24 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     return result;
 }
 
+- (NTYTMutationResult *)setHideMixEnabled:(BOOL)enabled {
+    __block NTYTMutationResult *result;
+    [self performSynchronous:^{
+        if (![self mutationsAllowedOnQueue]) {
+            result = [NTYTMutationResult failureWithCode:NTYTMutationErrorMutationProtected
+                                                 message:@"This settings file is read-only because it is degraded or unsupported."];
+            return;
+        }
+        if (self.committedSettings.hideMix == enabled) {
+            result = [NTYTMutationResult noChangeResult];
+            return;
+        }
+        result = [self commitCandidateSettingsOnQueue:
+            [self settingsByReplacingHideMix:enabled]];
+    }];
+    return result;
+}
+
 - (NTYTMutationResult *)commitCandidateSettingsOnQueue:(NTYTStoredSettings *)candidate {
     NSError *snapshotError = nil;
     NTYTRuntimeSettingsSnapshot *candidateSnapshot =
@@ -490,7 +517,13 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     NSMutableDictionary<NSNumber *, NTYTStoredList *> *lists =
         [self.committedSettings.lists mutableCopy];
     lists[@(listID)] = list;
-    return [[NTYTStoredSettings alloc] initWithLists:lists];
+    return [[NTYTStoredSettings alloc] initWithLists:lists
+                                            hideMix:self.committedSettings.hideMix];
+}
+
+- (NTYTStoredSettings *)settingsByReplacingHideMix:(BOOL)hideMix {
+    return [[NTYTStoredSettings alloc] initWithLists:self.committedSettings.lists
+                                            hideMix:hideMix];
 }
 
 - (NSUInteger)findRuleID:(NSUUID *)ruleID inRules:(NSArray<NTYTStoredRule *> *)rules {

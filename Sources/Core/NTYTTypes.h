@@ -3,7 +3,17 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef NS_ENUM(NSInteger, NTYTContentType) {
-    NTYTContentTypeVideo = 1,
+    NTYTContentTypeUnresolved = 0,
+    NTYTContentTypeVideo,
+    NTYTContentTypePost,
+    NTYTContentTypePlaylistNormal,
+    NTYTContentTypePlaylistMix,
+};
+
+typedef NS_ENUM(NSInteger, NTYTMetadataValueState) {
+    NTYTMetadataValueStateAvailable = 0,
+    NTYTMetadataValueStateAbsent,
+    NTYTMetadataValueStateUnavailable,
 };
 
 typedef NS_ENUM(NSInteger, NTYTMatchResult) {
@@ -26,6 +36,13 @@ typedef NS_ENUM(NSInteger, NTYTListID) {
     NTYTListIDVideosID,
     NTYTListIDChannelsBlock,
     NTYTListIDChannelsAllow,
+    NTYTListIDPostContent,
+    NTYTListIDPostChannel,
+    NTYTListIDPlaylistTitle,
+    NTYTListIDPlaylistChannel,
+    NTYTListIDPlaylistID,
+    NTYTListIDGlobalBlock,
+    NTYTListIDGlobalAllow,
 };
 
 typedef NS_ENUM(NSInteger, NTYTListKind) {
@@ -34,9 +51,13 @@ typedef NS_ENUM(NSInteger, NTYTListKind) {
 };
 
 typedef NS_ENUM(NSInteger, NTYTTargetKind) {
-    NTYTTargetKindTitle = 0,
-    NTYTTargetKindChannel = 1,
-    NTYTTargetKindVideoID = 2,
+    NTYTTargetKindGeneral = 0,
+    NTYTTargetKindTitle,
+    NTYTTargetKindChannel,
+    NTYTTargetKindVideoID,
+    NTYTTargetKindPostBody,
+    NTYTTargetKindPlaylistID,
+    NTYTTargetKindGlobal,
 };
 
 typedef NS_ENUM(NSInteger, NTYTListOptionID) {
@@ -53,6 +74,8 @@ typedef NS_ENUM(NSInteger, NTYTModifierKind) {
     NTYTModifierKindChannel = 0,
     NTYTModifierKindContent = 1,
     NTYTModifierKindVideo = 2,
+    NTYTModifierKindPost = 3,
+    NTYTModifierKindPlaylist = 4,
 };
 
 typedef NS_ENUM(NSInteger, NTYTSettingsLifecycleState) {

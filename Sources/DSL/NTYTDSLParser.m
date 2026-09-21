@@ -184,7 +184,9 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     BOOL isChannel = [name isEqualToString:@"ch"];
     BOOL isContent = [name isEqualToString:@"ctn"];
     BOOL isVideo = [name isEqualToString:@"video"];
-    if (!isChannel && !isContent && !isVideo) {
+    BOOL isPost = [name isEqualToString:@"post"];
+    BOOL isPlaylist = [name isEqualToString:@"playlist"];
+    if (!isChannel && !isContent && !isVideo && !isPost && !isPlaylist) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorUnknownModifier,
                                   [NSString stringWithFormat:@"Unknown modifier: %@", name]);
@@ -192,18 +194,22 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         return nil;
     }
 
-    if (isVideo) {
+    if (isVideo || isPost || isPlaylist) {
         if (cursor >= expression.length || [expression characterAtIndex:cursor] != '}') {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorUnexpectedModifierValue,
-                                      @"The video modifier does not accept a value.");
+                                      @"Content-type predicate modifiers do not accept a value.");
             }
             return nil;
         }
         if (nextIndex) {
             *nextIndex = cursor + 1;
         }
-        return [NTYTModifier videoModifierNegative:modifierNegative];
+        NTYTModifierKind kind = isVideo
+            ? NTYTModifierKindVideo
+            : (isPost ? NTYTModifierKindPost : NTYTModifierKindPlaylist);
+        return [NTYTModifier predicateModifierWithKind:kind
+                                              negative:modifierNegative];
     }
 
     if (cursor >= expression.length || [expression characterAtIndex:cursor] != ':') {

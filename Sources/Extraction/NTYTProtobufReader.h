@@ -14,6 +14,9 @@ FOUNDATION_EXPORT NSErrorDomain const NTYTProtobufReaderErrorDomain;
 + (nullable NSArray<NSData *> *)lengthDelimitedValuesForField:(uint32_t)fieldNumber
                                                         inData:(NSData *)data
                                                          error:(NSError * _Nullable * _Nullable)error;
++ (nullable NSArray<NSNumber *> *)varintValuesForField:(uint32_t)fieldNumber
+                                                inData:(NSData *)data
+                                                 error:(NSError * _Nullable * _Nullable)error;
 + (nullable NSArray<NSString *> *)UTF8StringsForDirectField:(uint32_t)fieldNumber
                                                      inMessage:(NSData *)message
                                                           error:(NSError * _Nullable * _Nullable)error;
