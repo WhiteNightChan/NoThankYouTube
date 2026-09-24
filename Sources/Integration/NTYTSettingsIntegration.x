@@ -6,6 +6,7 @@
 #import "Debug/LogHelper.h"
 #import "UI/NTYTCategoryViewController.h"
 #import "UI/NTYTUIStrings.h"
+#import "UI/NTYTSettingsTransferFlowController.h"
 
 static const NSInteger NTYTSettingsCategory = 'ntyt';
 
@@ -134,6 +135,33 @@ static id NTYTSectionItemForPage(NTYTSettingsCategoryPage page) {
     return item;
 }
 
+static id NTYTSectionItemForTransferAction(BOOL importAction) {
+    Class itemClass = NSClassFromString(@"YTSettingsSectionItem");
+    SEL selector = @selector(itemWithTitle:titleDescription:accessibilityIdentifier:detailTextBlock:selectBlock:);
+    if (!itemClass || ![itemClass respondsToSelector:selector]) {
+        return nil;
+    }
+
+    BOOL (^selectBlock)(id, NSUInteger) = ^BOOL(id cell, __unused NSUInteger argument) {
+        UIViewController *source = NTYTViewControllerFromResponder(cell);
+        if (!source) {
+            return NO;
+        }
+        if (importAction) {
+            [NTYTSettingsTransferFlowController startImportFromViewController:source];
+        } else {
+            [NTYTSettingsTransferFlowController startExportFromViewController:source];
+        }
+        return YES;
+    };
+    typedef id (*ItemFactory)(id, SEL, id, id, id, id, id);
+    return ((ItemFactory)objc_msgSend)(itemClass, selector,
+                                      importAction ? @"Import Settings" : @"Export Settings",
+                                      nil,
+                                      importAction ? @"ntyt.import" : @"ntyt.export",
+                                      nil, [selectBlock copy]);
+}
+
 static id NTYTObjectForKeySafely(id object, NSString *key) {
     if (!object || key.length == 0) {
         return nil;
@@ -190,8 +218,11 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
     id posts = NTYTSectionItemForPage(NTYTSettingsCategoryPagePosts);
     id playlists = NTYTSectionItemForPage(NTYTSettingsCategoryPagePlaylists);
     id global = NTYTSectionItemForPage(NTYTSettingsCategoryPageGlobal);
+    id importSettings = NTYTSectionItemForTransferAction(YES);
+    id exportSettings = NTYTSectionItemForTransferAction(NO);
 
-    if (!general || !videos || !channels || !posts || !playlists || !global) {
+    if (!general || !videos || !channels || !posts || !playlists || !global ||
+        !importSettings || !exportSettings) {
         NTYTLog(@"[SettingsIntegration] install failed: section items general=%@ videos=%@ channels=%@ posts=%@ playlists=%@ global=%@",
                 general ? @"OK" : @"nil",
                 videos ? @"OK" : @"nil",
@@ -208,7 +239,8 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
         return NO;
     }
 
-    NSArray *items = @[global, general, videos, channels, posts, playlists];
+    NSArray *items = @[global, general, videos, channels, posts, playlists,
+                       importSettings, exportSettings];
 
     SEL modern = @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:);
     if ([controller respondsToSelector:modern]) {

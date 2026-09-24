@@ -3,6 +3,8 @@
 #import "Core/NTYTTypes.h"
 
 @class NTYTStoredRule;
+@class NTYTPreparedImport;
+@class NTYTExportCapture;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -16,6 +18,22 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)successResult;
 + (instancetype)noChangeResult;
 + (instancetype)failureWithCode:(NTYTMutationErrorCode)code message:(NSString *)message;
+
+@end
+
+typedef NS_ENUM(NSInteger, NTYTImportCommitStatus) {
+    NTYTImportCommitStatusSuccess = 0,
+    NTYTImportCommitStatusNoChange,
+    NTYTImportCommitStatusConfirmationRequired,
+    NTYTImportCommitStatusFailure,
+};
+
+@interface NTYTImportCommitResult : NSObject
+
+@property(nonatomic, readonly) NTYTImportCommitStatus status;
+@property(nonatomic, strong, readonly, nullable) NSUUID *confirmationToken;
+@property(nonatomic, readonly) NTYTSettingsLifecycleState destinationLifecycle;
+@property(nonatomic, strong, readonly, nullable) NSError *error;
 
 @end
 
@@ -42,6 +60,11 @@ NS_ASSUME_NONNULL_BEGIN
                                 forOption:(NTYTListOptionID)optionID
                                     listID:(NTYTListID)listID;
 - (NTYTMutationResult *)setHideMixEnabled:(BOOL)enabled;
+
+// A nil token starts an attempt; a returned token authorizes only that destination state.
+- (NTYTImportCommitResult *)commitPreparedImport:(NTYTPreparedImport *)prepared
+                                confirmationToken:(nullable NSUUID *)token;
+- (nullable NTYTExportCapture *)captureSettingsForExport;
 
 @end
 

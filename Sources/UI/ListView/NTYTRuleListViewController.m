@@ -14,6 +14,7 @@
 #import "UI/NTYTListEditingAdapter.h"
 #import "UI/NTYTRuleListItem.h"
 #import "UI/NTYTUIStrings.h"
+#import "UI/NTYTTransientMessagePresenter.h"
 #import "Persistence/NTYTSettingsCoordinator.h"
 
 @implementation NTYTRuleListViewController
@@ -202,33 +203,6 @@ moveRowAtIndexPath:(NSIndexPath *)fromIndexPath
     }
 }
 
-- (void)showTransientMessage:(NSString *)message {
-    if (message.length == 0) {
-        return;
-    }
-    UILabel *label = [UILabel new];
-    label.text = message;
-    label.textColor = UIColor.whiteColor;
-    label.backgroundColor = [UIColor.blackColor colorWithAlphaComponent:0.78];
-    label.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
-    label.textAlignment = NSTextAlignmentCenter;
-    label.numberOfLines = 0;
-    label.layer.cornerRadius = 8.0;
-    label.layer.masksToBounds = YES;
-    label.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.view addSubview:label];
-    [NSLayoutConstraint activateConstraints:@[
-        [label.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
-        [label.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-20.0],
-        [label.widthAnchor constraintLessThanOrEqualToAnchor:self.view.widthAnchor multiplier:0.82],
-    ]];
-    [UIView animateWithDuration:0.2
-                          delay:1.2
-                        options:UIViewAnimationOptionCurveEaseInOut
-                     animations:^{ label.alpha = 0.0; }
-                     completion:^(__unused BOOL finished) { [label removeFromSuperview]; }];
-}
-
 - (void)presentFailureMessage:(NSString *)message {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NoThankYouTube"
                                                                    message:message
@@ -248,7 +222,7 @@ moveRowAtIndexPath:(NSIndexPath *)fromIndexPath
         return;
     }
     UIPasteboard.generalPasteboard.string = item.text;
-    [self showTransientMessage:@"Copied"];
+    [NTYTTransientMessagePresenter showMessage:@"Copied" inViewController:self];
 }
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {

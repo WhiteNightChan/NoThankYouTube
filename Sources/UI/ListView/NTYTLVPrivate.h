@@ -26,7 +26,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)loadItemsFromAuthoritativeSource;
 - (void)reloadListDataForCurrentState;
 - (void)refreshListUIForCurrentState;
-- (void)showTransientMessage:(NSString *)message;
 - (void)handleLongPress:(UILongPressGestureRecognizer *)gesture;
 - (void)presentFailureMessage:(NSString *)message;
 
