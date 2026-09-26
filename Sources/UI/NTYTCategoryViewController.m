@@ -3,7 +3,8 @@
 #import "Core/NTYTListDefinition.h"
 #import "ListView/NTYTRuleListViewController.h"
 #import "ListView/NTYTLVTextCell.h"
-#import "NTYTUIStrings.h"
+#import "Localization/NTYTUIStrings.h"
+#import "Localization/NTYTErrorStrings.h"
 #import "Persistence/NTYTSettingsCoordinator.h"
 
 @interface NTYTOptionSwitch : UISwitch
@@ -134,9 +135,7 @@
     if (coordinator.mutationsAllowed) {
         self.navigationItem.prompt = nil;
     } else {
-        self.navigationItem.prompt =
-            [NSString stringWithFormat:@"Read-only — %@",
-                NTYTSettingsLifecycleDescription(coordinator.lifecycleState)];
+        self.navigationItem.prompt = NTYTReadOnlyText(coordinator.lifecycleState);
     }
 }
 
@@ -166,7 +165,7 @@
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
 
     if (self.categoryPage == NTYTSettingsCategoryPagePlaylists && indexPath.section == 0) {
-        [cell configureWithText:@"Hide Mix"];
+        [cell configureWithText:NTYTHideMixTitle()];
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
         NTYTHideMixSwitch *toggle = [NTYTHideMixSwitch new];
         toggle.on = NTYTSettingsCoordinator.sharedCoordinator.hideMixEnabled;
@@ -237,10 +236,10 @@
     [self updateLifecyclePresentation];
     if (!result.isSuccess) {
         UIAlertController *alert =
-            [UIAlertController alertControllerWithTitle:@"NoThankYouTube"
-                                                message:result.message
+            [UIAlertController alertControllerWithTitle:NTYTAppName()
+                                                message:NTYTMutationErrorText(result)
                                          preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+        [alert addAction:[UIAlertAction actionWithTitle:NTYTOKTitle()
                                                   style:UIAlertActionStyleDefault
                                                 handler:nil]];
         [self presentViewController:alert animated:YES completion:nil];
@@ -256,10 +255,10 @@
     [self updateLifecyclePresentation];
     if (!result.isSuccess) {
         UIAlertController *alert =
-            [UIAlertController alertControllerWithTitle:@"NoThankYouTube"
-                                                message:result.message
+            [UIAlertController alertControllerWithTitle:NTYTAppName()
+                                                message:NTYTMutationErrorText(result)
                                          preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+        [alert addAction:[UIAlertAction actionWithTitle:NTYTOKTitle()
                                                   style:UIAlertActionStyleDefault
                                                 handler:nil]];
         [self presentViewController:alert animated:YES completion:nil];
