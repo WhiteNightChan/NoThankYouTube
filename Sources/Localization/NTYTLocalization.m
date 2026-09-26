@@ -3,8 +3,19 @@
 #import <rootless.h>
 
 NSString *NTYTLocalizedString(NSString *key) {
-    NSString *bundlePath = ROOT_PATH_NS(@"/Library/Application Support/NoThankYouTube.bundle");
-    NSBundle *resources = [NSBundle bundleWithPath:bundlePath];
+    NSString *bundlePath =
+        [[NSBundle mainBundle] pathForResource:@"NoThankYouTube"
+                                        ofType:@"bundle"];
+
+    NSBundle *resources =
+        bundlePath ? [NSBundle bundleWithPath:bundlePath] : nil;
+
+    if (!resources) {
+        bundlePath =
+            ROOT_PATH_NS(@"/Library/Application Support/NoThankYouTube.bundle");
+        resources = [NSBundle bundleWithPath:bundlePath];
+    }
+
     if (!resources) {
         return key;
     }
