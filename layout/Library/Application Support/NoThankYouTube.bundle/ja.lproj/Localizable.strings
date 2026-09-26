@@ -32,7 +32,7 @@
 "ui.status.read_only_format" = "読み取り専用 — %@";
 "ui.rule.editor.add_title" = "ルールを追加";
 "ui.rule.editor.edit_title" = "ルールを編集";
-"ui.rule.editor.instruction" = "ルールを入力";
+"ui.rule.editor.instruction" = "下記にルールを入力してください。";
 "ui.rule.editor.expression_placeholder" = "ここにルールを入力";
 "ui.rule.list.search_placeholder" = "検索";
 "ui.rule.list.empty" = "ルールがありません";
