@@ -3,11 +3,35 @@
 #import "Core/NTYTRuntimeModel.h"
 
 NSErrorDomain const NTYTDSLErrorDomain = @"com.whitenightchan.nothankyoutube.dsl";
+NSErrorUserInfoKey const NTYTDSLErrorReasonKey = @"NTYTDSLErrorReason";
+NSErrorUserInfoKey const NTYTDSLErrorModifierNameKey = @"NTYTDSLErrorModifierName";
+NSErrorUserInfoKey const NTYTDSLErrorRegexFlagKey = @"NTYTDSLErrorRegexFlag";
 
-static NSError *NTYTDSLError(NTYTDSLErrorCode code, NSString *message) {
+static NSError *NTYTDSLErrorWithDetail(NTYTDSLErrorCode code,
+                                       NTYTDSLErrorReason reason,
+                                       NSString *message,
+                                       NSErrorUserInfoKey parameterKey,
+                                       NSString *parameter,
+                                       NSError *underlyingError) {
+    NSMutableDictionary *userInfo = [@{
+        NTYTDSLErrorReasonKey: @(reason),
+        NSLocalizedDescriptionKey: message,
+    } mutableCopy];
+    if (parameterKey && parameter) {
+        userInfo[parameterKey] = parameter;
+    }
+    if (underlyingError) {
+        userInfo[NSUnderlyingErrorKey] = underlyingError;
+    }
     return [NSError errorWithDomain:NTYTDSLErrorDomain
                                code:code
-                           userInfo:@{NSLocalizedDescriptionKey: message}];
+                           userInfo:userInfo];
+}
+
+static NSError *NTYTDSLError(NTYTDSLErrorCode code,
+                             NTYTDSLErrorReason reason,
+                             NSString *message) {
+    return NTYTDSLErrorWithDetail(code, reason, message, nil, nil, nil);
 }
 
 static BOOL NTYTIsHorizontalWhitespace(unichar character) {
@@ -70,6 +94,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         ![identifier isKindOfClass:[NSUUID class]]) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorEmptyExpression,
+                                  NTYTDSLErrorReasonInvalidInput,
                                   @"The rule expression or identifier is invalid.");
         }
         return nil;
@@ -78,6 +103,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (NTYTContainsNewline(rawExpression)) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorNewline,
+                                  NTYTDSLErrorReasonContainsNewline,
                                   @"A rule must be a single line.");
         }
         return nil;
@@ -87,6 +113,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (expression.length == 0) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorEmptyExpression,
+                                  NTYTDSLErrorReasonEmptyExpression,
                                   @"A main matcher is required.");
         }
         return nil;
@@ -110,6 +137,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if (cursor >= expression.length) {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorMissingMainMatcher,
+                                      NTYTDSLErrorReasonMissingMainMatcherAfterModifiers,
                                       @"A main matcher is required after the modifiers.");
             }
             return nil;
@@ -118,6 +146,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if (!NTYTIsHorizontalWhitespace([expression characterAtIndex:cursor])) {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorMissingSeparator,
+                                      NTYTDSLErrorReasonMissingSeparatorAfterModifier,
                                       @"A modifier must be followed by horizontal whitespace.");
             }
             return nil;
@@ -131,6 +160,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if (cursor >= expression.length) {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorMissingMainMatcher,
+                                      NTYTDSLErrorReasonMissingMainMatcherAfterModifiers,
                                       @"A main matcher is required after the modifiers.");
             }
             return nil;
@@ -175,6 +205,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (cursor == nameStart) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorMalformedModifier,
+                                  NTYTDSLErrorReasonMalformedModifierName,
                                   @"The modifier name is malformed.");
         }
         return nil;
@@ -188,8 +219,9 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     BOOL isPlaylist = [name isEqualToString:@"playlist"];
     if (!isChannel && !isContent && !isVideo && !isPost && !isPlaylist) {
         if (error) {
-            *error = NTYTDSLError(NTYTDSLErrorUnknownModifier,
-                                  [NSString stringWithFormat:@"Unknown modifier: %@", name]);
+            *error = NTYTDSLErrorWithDetail(NTYTDSLErrorUnknownModifier, NTYTDSLErrorReasonUnknownModifier,
+                                           [NSString stringWithFormat:@"Unknown modifier: %@", name],
+                                           NTYTDSLErrorModifierNameKey, name, nil);
         }
         return nil;
     }
@@ -198,6 +230,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if (cursor >= expression.length || [expression characterAtIndex:cursor] != '}') {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorUnexpectedModifierValue,
+                                      NTYTDSLErrorReasonPredicateModifierValueNotAllowed,
                                       @"Content-type predicate modifiers do not accept a value.");
             }
             return nil;
@@ -215,6 +248,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (cursor >= expression.length || [expression characterAtIndex:cursor] != ':') {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorMissingModifierValue,
+                                  NTYTDSLErrorReasonModifierValueRequired,
                                   @"The ch and ctn modifiers require a value.");
         }
         return nil;
@@ -230,6 +264,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (valueStart >= expression.length) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorMissingModifierValue,
+                                  NTYTDSLErrorReasonModifierValueMissing,
                                   @"The modifier value is missing.");
         }
         return nil;
@@ -242,6 +277,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
             NTYTIsHorizontalWhitespace([expression characterAtIndex:probe])) {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorMalformedModifier,
+                                      NTYTDSLErrorReasonDetachedNegativeMarker,
                                       @"A negative marker must be attached to its matcher.");
             }
             return nil;
@@ -268,6 +304,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
             [expression characterAtIndex:closeIndex] != '}') {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorMalformedModifier,
+                                      NTYTDSLErrorReasonRegexModifierMissingClosingBrace,
                                       @"The regex modifier value has no closing brace.");
             }
             return nil;
@@ -293,6 +330,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if (closeIndex == NSNotFound) {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorMalformedModifier,
+                                      NTYTDSLErrorReasonModifierMissingClosingBrace,
                                       @"The modifier has no closing brace.");
             }
             return nil;
@@ -305,6 +343,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (valueSource.length == 0) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorMissingModifierValue,
+                                  NTYTDSLErrorReasonModifierValueEmpty,
                                   @"The modifier value is empty.");
         }
         return nil;
@@ -331,6 +370,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (token.length == 0) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorMissingMainMatcher,
+                                  NTYTDSLErrorReasonMatcherRequired,
                                   @"A matcher is required.");
         }
         return nil;
@@ -342,6 +382,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if (token.length == 1 || NTYTIsHorizontalWhitespace([token characterAtIndex:1])) {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorMalformedEscape,
+                                      NTYTDSLErrorReasonDetachedNegativeMarker,
                                       @"A negative marker must be attached to its matcher.");
             }
             return nil;
@@ -363,7 +404,8 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if (!regularExpression) {
             if (error) {
                 NSString *message = compileError.localizedDescription ?: @"The regex could not be compiled.";
-                *error = NTYTDSLError(NTYTDSLErrorRegexCompile, message);
+                *error = NTYTDSLErrorWithDetail(NTYTDSLErrorRegexCompile, NTYTDSLErrorReasonRegexCompileFailed,
+                                                 message, nil, nil, compileError);
             }
             return nil;
         }
@@ -372,6 +414,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if ([self plainSourceContainsUnescapedModifierToken:token]) {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorModifierAfterMain,
+                                      NTYTDSLErrorReasonModifierAfterMain,
                                       @"Modifiers are allowed only before the main matcher.");
             }
             return nil;
@@ -391,6 +434,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (literal.length < 2 || [literal characterAtIndex:0] != '/') {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorMalformedRegex,
+                                  NTYTDSLErrorReasonMalformedRegexLiteral,
                                   @"The regex literal is malformed.");
         }
         return nil;
@@ -406,6 +450,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
             if (cursor + 1 >= literal.length) {
                 if (error) {
                     *error = NTYTDSLError(NTYTDSLErrorMalformedRegex,
+                                          NTYTDSLErrorReasonRegexIncompleteEscape,
                                           @"The regex ends with an incomplete escape.");
                 }
                 return nil;
@@ -432,6 +477,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (!foundClosingSlash) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorMalformedRegex,
+                                  NTYTDSLErrorReasonRegexMissingClosingDelimiter,
                                   @"The regex has no closing delimiter.");
         }
         return nil;
@@ -439,6 +485,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (pattern.length == 0) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorEmptyRegex,
+                                  NTYTDSLErrorReasonEmptyRegex,
                                   @"An empty regex is not allowed; use /.*/ explicitly.");
         }
         return nil;
@@ -449,14 +496,16 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         unichar flag = [literal characterAtIndex:cursor];
         if (flag != 'i') {
             if (error) {
-                *error = NTYTDSLError(NTYTDSLErrorUnsupportedRegexFlag,
-                                      [NSString stringWithFormat:@"Unsupported regex flag: %C", flag]);
+                *error = NTYTDSLErrorWithDetail(NTYTDSLErrorUnsupportedRegexFlag, NTYTDSLErrorReasonUnsupportedRegexFlag,
+                                               [NSString stringWithFormat:@"Unsupported regex flag: %C", flag],
+                                               NTYTDSLErrorRegexFlagKey, [NSString stringWithFormat:@"%C", flag], nil);
             }
             return nil;
         }
         if (hasIFlag) {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorDuplicateRegexFlag,
+                                      NTYTDSLErrorReasonDuplicateRegexFlag,
                                       @"The regex flag i is duplicated.");
             }
             return nil;
@@ -483,6 +532,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
             if (cursor + 1 >= expression.length) {
                 if (error) {
                     *error = NTYTDSLError(NTYTDSLErrorMalformedRegex,
+                                          NTYTDSLErrorReasonRegexIncompleteEscape,
                                           @"The regex ends with an incomplete escape.");
                 }
                 return nil;
@@ -500,6 +550,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     if (!foundClosingSlash) {
         if (error) {
             *error = NTYTDSLError(NTYTDSLErrorMalformedRegex,
+                                  NTYTDSLErrorReasonRegexMissingClosingDelimiter,
                                   @"The regex has no closing delimiter.");
         }
         return nil;
@@ -526,6 +577,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if (i + 1 >= source.length) {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorMalformedEscape,
+                                      NTYTDSLErrorReasonPlainMatcherIncompleteEscape,
                                       @"The plain matcher ends with an incomplete escape.");
             }
             return nil;
