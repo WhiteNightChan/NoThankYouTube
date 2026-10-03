@@ -13,11 +13,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly, getter=isSuccess) BOOL success;
 @property(nonatomic, readonly, getter=isNoChange) BOOL noChange;
 @property(nonatomic, readonly) NTYTMutationErrorCode errorCode;
-@property(nonatomic, copy, readonly) NSString *message;
+@property(nonatomic, readonly) NTYTMutationFailureReason failureReason;
+@property(nonatomic, strong, readonly, nullable) NSError *underlyingError;
 
 + (instancetype)successResult;
 + (instancetype)noChangeResult;
-+ (instancetype)failureWithCode:(NTYTMutationErrorCode)code message:(NSString *)message;
++ (instancetype)failureWithCode:(NTYTMutationErrorCode)code
+                         reason:(NTYTMutationFailureReason)reason
+                underlyingError:(nullable NSError *)underlyingError;
 
 @end
 

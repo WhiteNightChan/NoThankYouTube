@@ -4,6 +4,8 @@
 #import <objc/runtime.h>
 
 #import "NTYTTransientMessagePresenter.h"
+#import "Localization/NTYTUIStrings.h"
+#import "Localization/NTYTErrorStrings.h"
 #import "Persistence/NTYTSettingsCoordinator.h"
 #import "Persistence/NTYTSettingsTransferModels.h"
 #import "Persistence/NTYTSettingsTransferService.h"
@@ -75,7 +77,7 @@ static BOOL NTYTExportSessionActive = NO;
 - (void)presentImportDocumentPicker {
     UIViewController *presenter = self.presenter;
     if (!presenter.view.window || presenter.presentedViewController) {
-        [self notify:@"Could not open the file picker."];
+        [self notify:NTYTImportPickerUnavailableText()];
         [self finish];
         return;
     }
@@ -86,12 +88,12 @@ static BOOL NTYTExportSessionActive = NO;
     @try {
         [presenter presentViewController:picker animated:YES completion:^{
             if (!picker.view.window && self.presenter) {
-                [self notify:@"Could not open the file picker."];
+                [self notify:NTYTImportPickerUnavailableText()];
                 [self finish];
             }
         }];
     } @catch (__unused NSException *exception) {
-        [self notify:@"Could not open the file picker."];
+        [self notify:NTYTImportPickerUnavailableText()];
         [self finish];
     }
 }
@@ -103,12 +105,12 @@ static BOOL NTYTExportSessionActive = NO;
 - (void)documentPicker:(UIDocumentPickerViewController *)controller
  didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
     if (self.exportSession) {
-        [self notify:@"Settings exported."];
+        [self notify:NTYTExportSuccessText()];
         [self finish];
         return;
     }
     if (urls.count != 1) {
-        [self notify:@"Invalid settings file."];
+        [self notify:NTYTImportInvalidSelectionText()];
         [self finish];
         return;
     }
@@ -125,7 +127,7 @@ static BOOL NTYTExportSessionActive = NO;
         NTYTPreparedImport *prepared = [self.service prepareImportAtURL:sourceURL error:&error];
         dispatch_async(dispatch_get_main_queue(), ^{
             if (!prepared) {
-                [self notify:[self importFailureMessageForError:error]];
+                [self notify:NTYTSettingsTransferErrorText(error)];
                 [self finish];
                 return;
             }
@@ -133,19 +135,6 @@ static BOOL NTYTExportSessionActive = NO;
             [self attemptImportWithToken:nil];
         });
     });
-}
-
-- (NSString *)importFailureMessageForError:(NSError *)error {
-    if ([error.domain isEqualToString:NTYTSettingsTransferErrorDomain]) {
-        switch ((NTYTSettingsTransferErrorCode)error.code) {
-            case NTYTSettingsTransferErrorRead: return @"Could not read the settings file.";
-            case NTYTSettingsTransferErrorInvalidFile: return @"Invalid settings file.";
-            case NTYTSettingsTransferErrorUnsupportedVersion: return @"Unsupported settings version.";
-            case NTYTSettingsTransferErrorValidation: return @"Settings validation failed.";
-            case NTYTSettingsTransferErrorExportCreation: break;
-        }
-    }
-    return @"Could not read the settings file.";
 }
 
 - (void)attemptImportWithToken:(NSUUID *)token {
@@ -156,13 +145,13 @@ static BOOL NTYTExportSessionActive = NO;
             [self confirmReplacementWithToken:result.confirmationToken];
             return;
         case NTYTImportCommitStatusSuccess:
-            [self notify:@"Settings imported."];
+            [self notify:NTYTImportSuccessText()];
             break;
         case NTYTImportCommitStatusNoChange:
-            [self notify:@"No Changes."];
+            [self notify:NTYTImportNoChangesText()];
             break;
         case NTYTImportCommitStatusFailure:
-            [self notify:@"Could not save the imported settings."];
+            [self notify:NTYTImportCommitErrorText(result)];
             break;
     }
     [self finish];
@@ -171,21 +160,21 @@ static BOOL NTYTExportSessionActive = NO;
 - (void)confirmReplacementWithToken:(NSUUID *)token {
     UIViewController *presenter = self.presenter;
     if (!presenter.view.window || presenter.presentedViewController) {
-        [self notify:@"Could not show replacement confirmation."];
+        [self notify:NTYTImportConfirmationUnavailableText()];
         [self finish];
         return;
     }
     UIAlertController *alert = [UIAlertController
-        alertControllerWithTitle:@"Replace Settings?"
-                   message:@"The selected file will completely replace the current NoThankYouTube settings. Settings will not be merged."
+        alertControllerWithTitle:NTYTImportReplaceTitle()
+                   message:NTYTImportReplaceMessage()
             preferredStyle:UIAlertControllerStyleAlert];
     __weak UIAlertController *weakAlert = alert;
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTCancelTitle()
                                              style:UIAlertActionStyleCancel
                                            handler:^(__unused UIAlertAction *action) {
         [self finish];
     }]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Replace"
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTImportReplaceActionTitle()
                                              style:UIAlertActionStyleDestructive
                                            handler:^(__unused UIAlertAction *action) {
         // Wait until this Alert is gone before a destination race can show another.
@@ -196,12 +185,12 @@ static BOOL NTYTExportSessionActive = NO;
     @try {
         [presenter presentViewController:alert animated:YES completion:^{
             if (!alert.view.window && self.pendingImport) {
-                [self notify:@"Could not show replacement confirmation."];
+                [self notify:NTYTImportConfirmationUnavailableText()];
                 [self finish];
             }
         }];
     } @catch (__unused NSException *exception) {
-        [self notify:@"Could not show replacement confirmation."];
+        [self notify:NTYTImportConfirmationUnavailableText()];
         [self finish];
     }
 }
@@ -210,7 +199,7 @@ static BOOL NTYTExportSessionActive = NO;
     NTYTExportCapture *capture = [[NTYTSettingsCoordinator sharedCoordinator]
         captureSettingsForExport];
     if (!capture) {
-        [self notify:@"Settings export is unavailable."];
+        [self notify:NTYTExportUnavailableText()];
         [self finish];
         return;
     }
@@ -220,14 +209,14 @@ static BOOL NTYTExportSessionActive = NO;
         NSURL *fileURL = [self.service writeExportCapture:capture error:&error];
         dispatch_async(dispatch_get_main_queue(), ^{
             if (!fileURL) {
-                [self notify:@"Could not create the settings export."];
+                [self notify:NTYTSettingsTransferErrorText(error)];
                 [self finish];
                 return;
             }
             self.exportURL = fileURL;
             if (capture.isSalvage) {
                 // Show the notice while the root is visible, before the picker covers it.
-                [self notify:@"Export includes accepted valid settings only."];
+                [self notify:NTYTExportSalvageNoticeText()];
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.6 * NSEC_PER_SEC)),
                                dispatch_get_main_queue(), ^{ [self presentExportDocumentPicker]; });
             } else {
@@ -240,7 +229,7 @@ static BOOL NTYTExportSessionActive = NO;
 - (void)presentExportDocumentPicker {
     UIViewController *presenter = self.presenter;
     if (!presenter.view.window || presenter.presentedViewController || !self.exportURL) {
-        [self notify:@"Could not open the export file picker."];
+        [self notify:NTYTExportPickerUnavailableText()];
         [self finish];
         return;
     }
@@ -250,12 +239,12 @@ static BOOL NTYTExportSessionActive = NO;
     @try {
         [presenter presentViewController:picker animated:YES completion:^{
             if (!picker.view.window && self.presenter) {
-                [self notify:@"Could not open the export file picker."];
+                [self notify:NTYTExportPickerUnavailableText()];
                 [self finish];
             }
         }];
     } @catch (__unused NSException *exception) {
-        [self notify:@"Could not open the export file picker."];
+        [self notify:NTYTExportPickerUnavailableText()];
         [self finish];
     }
 }

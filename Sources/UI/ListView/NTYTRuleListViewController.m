@@ -13,7 +13,8 @@
 #import "NTYTLVSetupHelper.h"
 #import "UI/NTYTListEditingAdapter.h"
 #import "UI/NTYTRuleListItem.h"
-#import "UI/NTYTUIStrings.h"
+#import "Localization/NTYTUIStrings.h"
+#import "Localization/NTYTErrorStrings.h"
 #import "UI/NTYTTransientMessagePresenter.h"
 #import "Persistence/NTYTSettingsCoordinator.h"
 
@@ -199,15 +200,15 @@ moveRowAtIndexPath:(NSIndexPath *)fromIndexPath
     [self reloadListDataForCurrentState];
     [self refreshListUIForCurrentState];
     if (!result.isSuccess) {
-        [self presentFailureMessage:result.message];
+        [self presentFailureMessage:NTYTMutationErrorText(result)];
     }
 }
 
 - (void)presentFailureMessage:(NSString *)message {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NoThankYouTube"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:NTYTAppName()
                                                                    message:message
                                                             preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTOKTitle() style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }
 
@@ -222,7 +223,8 @@ moveRowAtIndexPath:(NSIndexPath *)fromIndexPath
         return;
     }
     UIPasteboard.generalPasteboard.string = item.text;
-    [NTYTTransientMessagePresenter showMessage:@"Copied" inViewController:self];
+    [NTYTTransientMessagePresenter showMessage:NTYTCopiedRuleText(item.text)
+                             inViewController:self];
 }
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {

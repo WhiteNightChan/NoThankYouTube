@@ -96,6 +96,23 @@ typedef NS_ENUM(NSInteger, NTYTMutationErrorCode) {
     NTYTMutationErrorPersistence,
 };
 
+typedef NS_ENUM(NSInteger, NTYTMutationFailureReason) {
+    NTYTMutationFailureReasonNone = 0,
+    NTYTMutationFailureReasonExpressionNotText,
+    NTYTMutationFailureReasonDSLParseFailed,
+    NTYTMutationFailureReasonDuplicateExpression,
+    NTYTMutationFailureReasonRuleNotFound,
+    NTYTMutationFailureReasonSelectedRuleMissing,
+    NTYTMutationFailureReasonInvalidList,
+    NTYTMutationFailureReasonNoRulesSelected,
+    NTYTMutationFailureReasonDuplicateRuleIdentifiers,
+    NTYTMutationFailureReasonInvalidDestinationPosition,
+    NTYTMutationFailureReasonUnsupportedOption,
+    NTYTMutationFailureReasonMutationProtected,
+    NTYTMutationFailureReasonSnapshotBuildFailed,
+    NTYTMutationFailureReasonPersistenceFailed,
+};
+
 FOUNDATION_EXPORT NTYTMatchResult NTYTNegateMatchResult(NTYTMatchResult result);
 FOUNDATION_EXPORT NSString *NTYTSettingsLifecycleDescription(NTYTSettingsLifecycleState state);
 

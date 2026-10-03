@@ -3,7 +3,8 @@
 #import "NTYTLVSelectHelper.h"
 #import "UI/NTYTListEditingAdapter.h"
 #import "UI/NTYTRuleListItem.h"
-#import "UI/NTYTUIStrings.h"
+#import "Localization/NTYTUIStrings.h"
+#import "Localization/NTYTErrorStrings.h"
 #import "Persistence/NTYTSettingsCoordinator.h"
 
 @implementation NTYTRuleListViewController (NTYTLVInputHelper)
@@ -109,7 +110,7 @@
                                              diagnostic:diagnostic
                                                textView:&textView];
     __weak typeof(self) weakSelf = self;
-    [alert addAction:[UIAlertAction actionWithTitle:@"Save"
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTSaveTitle()
                                               style:UIAlertActionStyleDefault
                                             handler:^(__unused UIAlertAction *action) {
         typeof(self) strongSelf = weakSelf;
@@ -122,11 +123,12 @@
             [strongSelf reloadAfterSuccessfulMutation];
         } else {
             dispatch_async(dispatch_get_main_queue(), ^{
-                [strongSelf presentAddInputAlertWithDraft:rawDraft diagnostic:result.message];
+                [strongSelf presentAddInputAlertWithDraft:rawDraft
+                                              diagnostic:NTYTMutationErrorText(result)];
             });
         }
     }]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTCancelTitle()
                                               style:UIAlertActionStyleCancel
                                             handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
@@ -141,7 +143,7 @@
                                              diagnostic:diagnostic
                                                textView:&textView];
     __weak typeof(self) weakSelf = self;
-    [alert addAction:[UIAlertAction actionWithTitle:@"Save"
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTSaveTitle()
                                               style:UIAlertActionStyleDefault
                                             handler:^(__unused UIAlertAction *action) {
         typeof(self) strongSelf = weakSelf;
@@ -157,11 +159,11 @@
             dispatch_async(dispatch_get_main_queue(), ^{
                 [strongSelf presentEditInputAlertForItem:item
                                                    draft:rawDraft
-                                              diagnostic:result.message];
+                                              diagnostic:NTYTMutationErrorText(result)];
             });
         }
     }]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTCancelTitle()
                                               style:UIAlertActionStyleCancel
                                             handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];

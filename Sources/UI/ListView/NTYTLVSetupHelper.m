@@ -2,7 +2,7 @@
 #import "NTYTLVDeleteFlowHelper.h"
 #import "NTYTLVPrivate.h"
 #import "NTYTLVSelectHelper.h"
-#import "UI/NTYTUIStrings.h"
+#import "Localization/NTYTUIStrings.h"
 
 @implementation NTYTRuleListViewController (NTYTLVSetupHelper)
 
@@ -117,7 +117,7 @@
 }
 
 - (UIBarButtonItem *)editBarButtonItemForEditing:(BOOL)editing {
-    return [self textBarButtonItemWithTitle:(editing ? @"Done" : @"Edit")
+    return [self textBarButtonItemWithTitle:(editing ? NTYTDoneTitle() : NTYTEditActionTitle())
                                   textColor:UIColor.labelColor
                                  fontWeight:UIFontWeightRegular
                                      target:self
@@ -125,7 +125,7 @@
 }
 
 - (void)configureToolbarItems {
-    UIBarButtonItem *selectAll = [[UIBarButtonItem alloc] initWithTitle:@"Select All"
+    UIBarButtonItem *selectAll = [[UIBarButtonItem alloc] initWithTitle:NTYTSelectAllTitle()
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
                                                                  action:@selector(selectAllToolbarButtonTapped)];
@@ -135,7 +135,7 @@
         [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace
                                                      target:nil
                                                      action:nil];
-    UIBarButtonItem *deleteButton = [[UIBarButtonItem alloc] initWithTitle:@"Delete"
+    UIBarButtonItem *deleteButton = [[UIBarButtonItem alloc] initWithTitle:NTYTDeleteActionTitle()
                                                                       style:UIBarButtonItemStylePlain
                                                                      target:self
                                                                      action:@selector(deleteSelectedItemsTapped)];

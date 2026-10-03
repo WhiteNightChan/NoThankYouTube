@@ -3,7 +3,7 @@
 #import "NTYTLVSelectHelper.h"
 #import "NTYTLVSetupHelper.h"
 #import "UI/NTYTListEditingAdapter.h"
-#import "UI/NTYTUIStrings.h"
+#import "Localization/NTYTUIStrings.h"
 
 @implementation NTYTRuleListViewController (NTYTLVPresentHelper)
 
@@ -57,7 +57,7 @@
                                           (long)[self currentSelectedCount],
                                           (long)visible];
     }
-    return [NSString stringWithFormat:@"%ld", (long)visible];
+    return NTYTRuleCountText((NSUInteger)visible);
 }
 
 - (UIBarButtonItem *)titleBarButtonItem {
@@ -108,9 +108,7 @@
     if ([self.editingAdapter mutationsAllowed]) {
         self.navigationItem.prompt = nil;
     } else {
-        self.navigationItem.prompt =
-            [NSString stringWithFormat:@"Read-only — %@",
-                NTYTSettingsLifecycleDescription([self.editingAdapter lifecycleState])];
+        self.navigationItem.prompt = NTYTReadOnlyText([self.editingAdapter lifecycleState]);
         if (self.tableView.editing) {
             [self.tableView setEditing:NO animated:NO];
             [self.navigationController setToolbarHidden:YES animated:NO];

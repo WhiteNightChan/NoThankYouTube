@@ -5,7 +5,7 @@
 
 #import "Debug/LogHelper.h"
 #import "UI/NTYTCategoryViewController.h"
-#import "UI/NTYTUIStrings.h"
+#import "Localization/NTYTUIStrings.h"
 #import "UI/NTYTSettingsTransferFlowController.h"
 
 static const NSInteger NTYTSettingsCategory = 'ntyt';
@@ -156,7 +156,7 @@ static id NTYTSectionItemForTransferAction(BOOL importAction) {
     };
     typedef id (*ItemFactory)(id, SEL, id, id, id, id, id);
     return ((ItemFactory)objc_msgSend)(itemClass, selector,
-                                      importAction ? @"Import Settings" : @"Export Settings",
+                                      importAction ? NTYTImportSettingsTitle() : NTYTExportSettingsTitle(),
                                       nil,
                                       importAction ? @"ntyt.import" : @"ntyt.export",
                                       nil, [selectBlock copy]);
@@ -252,7 +252,7 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
                                     modern,
                                     items,
                                     NTYTSettingsCategory,
-                                    @"NoThankYouTube",
+                                    NTYTAppName(),
                                     nil,
                                     nil,
                                     NO);
@@ -269,7 +269,7 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
                                     legacy,
                                     items,
                                     NTYTSettingsCategory,
-                                    @"NoThankYouTube",
+                                    NTYTAppName(),
                                     nil,
                                     NO);
         return YES;

@@ -17,7 +17,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 - (instancetype)initWithSuccess:(BOOL)success
                         noChange:(BOOL)noChange
                        errorCode:(NTYTMutationErrorCode)errorCode
-                         message:(NSString *)message;
+                   failureReason:(NTYTMutationFailureReason)failureReason
+                 underlyingError:(nullable NSError *)underlyingError;
 
 @end
 
@@ -51,13 +52,15 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 - (instancetype)initWithSuccess:(BOOL)success
                         noChange:(BOOL)noChange
                        errorCode:(NTYTMutationErrorCode)errorCode
-                         message:(NSString *)message {
+                   failureReason:(NTYTMutationFailureReason)failureReason
+                 underlyingError:(NSError *)underlyingError {
     self = [super init];
     if (self) {
         _success = success;
         _noChange = noChange;
         _errorCode = errorCode;
-        _message = [message copy];
+        _failureReason = failureReason;
+        _underlyingError = underlyingError;
     }
     return self;
 }
@@ -66,21 +69,26 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     return [[self alloc] initWithSuccess:YES
                                noChange:NO
                               errorCode:NTYTMutationErrorNone
-                                message:@""];
+                          failureReason:NTYTMutationFailureReasonNone
+                        underlyingError:nil];
 }
 
 + (instancetype)noChangeResult {
     return [[self alloc] initWithSuccess:YES
                                noChange:YES
                               errorCode:NTYTMutationErrorNone
-                                message:@""];
+                          failureReason:NTYTMutationFailureReasonNone
+                        underlyingError:nil];
 }
 
-+ (instancetype)failureWithCode:(NTYTMutationErrorCode)code message:(NSString *)message {
++ (instancetype)failureWithCode:(NTYTMutationErrorCode)code
+                         reason:(NTYTMutationFailureReason)reason
+                underlyingError:(NSError *)underlyingError {
     return [[self alloc] initWithSuccess:NO
                                noChange:NO
                               errorCode:code
-                                message:message ?: @"The operation failed."];
+                          failureReason:reason
+                        underlyingError:underlyingError];
 }
 
 @end
@@ -265,13 +273,15 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     [self performSynchronous:^{
         if (![self mutationsAllowedOnQueue]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorMutationProtected
-                                                 message:@"This settings file is read-only because it is degraded or unsupported."];
+                                                 reason:NTYTMutationFailureReasonMutationProtected
+                                           underlyingError:nil];
             return;
         }
         NTYTListDefinition *definition = [NTYTListDefinition definitionForListID:listID];
         if (!definition) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
-                                                 message:@"The requested list is invalid."];
+                                                 reason:NTYTMutationFailureReasonInvalidList
+                                           underlyingError:nil];
             return;
         }
 
@@ -289,7 +299,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             containExpressionDuplicate:rawExpression
                        excludingRuleID:nil]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorDuplicateExpression
-                                                 message:@"The same raw expression already exists in this list."];
+                                                 reason:NTYTMutationFailureReasonDuplicateExpression
+                                           underlyingError:nil];
             return;
         }
 
@@ -323,14 +334,16 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     [self performSynchronous:^{
         if (![self mutationsAllowedOnQueue]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorMutationProtected
-                                                 message:@"This settings file is read-only because it is degraded or unsupported."];
+                                                 reason:NTYTMutationFailureReasonMutationProtected
+                                           underlyingError:nil];
             return;
         }
         NTYTStoredList *currentList = [self.committedSettings listForID:listID];
         NSUInteger index = [self findRuleID:ruleID inRules:currentList.rules];
         if (index == NSNotFound) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorRuleNotFound
-                                                 message:@"The rule no longer exists."];
+                                                 reason:NTYTMutationFailureReasonRuleNotFound
+                                           underlyingError:nil];
             return;
         }
         NTYTStoredRule *currentRule = currentList.rules[index];
@@ -349,7 +362,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             containExpressionDuplicate:rawExpression
                        excludingRuleID:ruleID]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorDuplicateExpression
-                                                 message:@"The same raw expression already exists in this list."];
+                                                 reason:NTYTMutationFailureReasonDuplicateExpression
+                                           underlyingError:nil];
             return;
         }
 
@@ -374,12 +388,14 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     [self performSynchronous:^{
         if (![self mutationsAllowedOnQueue]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorMutationProtected
-                                                 message:@"This settings file is read-only because it is degraded or unsupported."];
+                                                 reason:NTYTMutationFailureReasonMutationProtected
+                                           underlyingError:nil];
             return;
         }
         if (ruleIDs.count == 0) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
-                                                 message:@"No rules were selected."];
+                                                 reason:NTYTMutationFailureReasonNoRulesSelected
+                                           underlyingError:nil];
             return;
         }
 
@@ -387,13 +403,15 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
         NSSet<NSUUID *> *targetIDs = [NSSet setWithArray:ruleIDs];
         if (targetIDs.count != ruleIDs.count) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
-                                                 message:@"The delete request contains duplicate rule identifiers."];
+                                                 reason:NTYTMutationFailureReasonDuplicateRuleIdentifiers
+                                           underlyingError:nil];
             return;
         }
         for (NSUUID *targetID in targetIDs) {
             if ([self findRuleID:targetID inRules:currentList.rules] == NSNotFound) {
                 result = [NTYTMutationResult failureWithCode:NTYTMutationErrorRuleNotFound
-                                                     message:@"At least one selected rule no longer exists."];
+                                                     reason:NTYTMutationFailureReasonSelectedRuleMissing
+                                           underlyingError:nil];
                 return;
             }
         }
@@ -420,19 +438,22 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     [self performSynchronous:^{
         if (![self mutationsAllowedOnQueue]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorMutationProtected
-                                                 message:@"This settings file is read-only because it is degraded or unsupported."];
+                                                 reason:NTYTMutationFailureReasonMutationProtected
+                                           underlyingError:nil];
             return;
         }
         NTYTStoredList *currentList = [self.committedSettings listForID:listID];
         NSUInteger sourceIndex = [self findRuleID:ruleID inRules:currentList.rules];
         if (sourceIndex == NSNotFound) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorRuleNotFound
-                                                 message:@"The rule no longer exists."];
+                                                 reason:NTYTMutationFailureReasonRuleNotFound
+                                           underlyingError:nil];
             return;
         }
         if (destinationIndex >= currentList.rules.count) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
-                                                 message:@"The destination position is invalid."];
+                                                 reason:NTYTMutationFailureReasonInvalidDestinationPosition
+                                           underlyingError:nil];
             return;
         }
         if (sourceIndex == destinationIndex) {
@@ -460,13 +481,15 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     [self performSynchronous:^{
         if (![self mutationsAllowedOnQueue]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorMutationProtected
-                                                 message:@"This settings file is read-only because it is degraded or unsupported."];
+                                                 reason:NTYTMutationFailureReasonMutationProtected
+                                           underlyingError:nil];
             return;
         }
         NTYTListDefinition *definition = [NTYTListDefinition definitionForListID:listID];
         if (!definition || ![definition supportsOption:optionID]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
-                                                 message:@"This option is not supported by the selected list."];
+                                                 reason:NTYTMutationFailureReasonUnsupportedOption
+                                           underlyingError:nil];
             return;
         }
         NTYTStoredList *currentList = [self.committedSettings listForID:listID];
@@ -501,7 +524,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     [self performSynchronous:^{
         if (![self mutationsAllowedOnQueue]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorMutationProtected
-                                                 message:@"This settings file is read-only because it is degraded or unsupported."];
+                                                 reason:NTYTMutationFailureReasonMutationProtected
+                                           underlyingError:nil];
             return;
         }
         if (self.committedSettings.hideMix == enabled) {
@@ -524,7 +548,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                 snapshotError.localizedDescription ?: @"<unknown>");
 
         return [NTYTMutationResult failureWithCode:NTYTMutationErrorSnapshotBuild
-                                           message:snapshotError.localizedDescription ?: @"The runtime snapshot could not be built."];
+                                           reason:NTYTMutationFailureReasonSnapshotBuildFailed
+                                  underlyingError:snapshotError];
     }
 
     NSError *commitError = nil;
@@ -533,7 +558,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                 commitError.localizedDescription ?: @"<unknown>");
 
         return [NTYTMutationResult failureWithCode:NTYTMutationErrorPersistence
-                                           message:commitError.localizedDescription ?: @"The settings could not be saved."];
+                                           reason:NTYTMutationFailureReasonPersistenceFailed
+                                  underlyingError:commitError];
     }
 
     NTYTLog(@"[Settings] mutation committed and snapshot published");
@@ -687,7 +713,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                                   identifier:(NSUUID *)identifier {
     if (![expression isKindOfClass:[NSString class]]) {
         return [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidExpression
-                                           message:@"The expression must be text."];
+                                           reason:NTYTMutationFailureReasonExpressionNotText
+                                           underlyingError:nil];
     }
     NSError *parseError = nil;
     NTYTRuntimeRule *rule = [NTYTDSLParser parseExpression:expression
@@ -695,7 +722,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                                                      error:&parseError];
     if (!rule) {
         return [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidExpression
-                                           message:parseError.localizedDescription ?: @"The expression is invalid."];
+                                           reason:NTYTMutationFailureReasonDSLParseFailed
+                                  underlyingError:parseError];
     }
     return nil;
 }

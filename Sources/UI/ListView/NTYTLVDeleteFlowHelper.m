@@ -4,7 +4,8 @@
 #import "NTYTLVSelectHelper.h"
 #import "UI/NTYTListEditingAdapter.h"
 #import "UI/NTYTRuleListItem.h"
-#import "UI/NTYTUIStrings.h"
+#import "Localization/NTYTUIStrings.h"
+#import "Localization/NTYTErrorStrings.h"
 #import "Persistence/NTYTSettingsCoordinator.h"
 
 @implementation NTYTRuleListViewController (NTYTLVDeleteFlowHelper)
@@ -26,12 +27,12 @@
         [UIAlertController alertControllerWithTitle:NTYTDeleteTitle(selected.count)
                                             message:NTYTDeleteMessage(selected.count, expression)
                                      preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Delete"
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTDeleteActionTitle()
                                               style:UIAlertActionStyleDestructive
                                             handler:^(__unused UIAlertAction *action) {
         [self performDeleteSelectedItems];
     }]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTCancelTitle()
                                               style:UIAlertActionStyleCancel
                                             handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
@@ -51,7 +52,7 @@
         [self clearEditingSelectionForSearchRefresh];
         [self reloadListDataForCurrentState];
         [self refreshListUIForCurrentState];
-        [self presentFailureMessage:@"At least one selected rule no longer exists."];
+        [self presentFailureMessage:NTYTSelectionStaleText()];
         return;
     }
 
@@ -61,7 +62,7 @@
     [self reloadListDataForCurrentState];
     [self refreshListUIForCurrentState];
     if (!result.isSuccess) {
-        [self presentFailureMessage:result.message];
+        [self presentFailureMessage:NTYTMutationErrorText(result)];
     }
 }
 
@@ -89,7 +90,7 @@ forRowAtIndexPath:(NSIndexPath *)indexPath {
     [self reloadListDataForCurrentState];
     [self refreshListUIForCurrentState];
     if (!result.isSuccess) {
-        [self presentFailureMessage:result.message];
+        [self presentFailureMessage:NTYTMutationErrorText(result)];
     }
 }
 

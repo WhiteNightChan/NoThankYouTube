@@ -24,6 +24,37 @@ typedef NS_ERROR_ENUM(NTYTDSLErrorDomain, NTYTDSLErrorCode) {
     NTYTDSLErrorRegexCompile,
 };
 
+typedef NS_ENUM(NSInteger, NTYTDSLErrorReason) {
+    NTYTDSLErrorReasonInvalidInput = 0,
+    NTYTDSLErrorReasonContainsNewline,
+    NTYTDSLErrorReasonEmptyExpression,
+    NTYTDSLErrorReasonMissingMainMatcherAfterModifiers,
+    NTYTDSLErrorReasonMissingSeparatorAfterModifier,
+    NTYTDSLErrorReasonMalformedModifierName,
+    NTYTDSLErrorReasonUnknownModifier,
+    NTYTDSLErrorReasonPredicateModifierValueNotAllowed,
+    NTYTDSLErrorReasonModifierValueRequired,
+    NTYTDSLErrorReasonModifierValueMissing,
+    NTYTDSLErrorReasonModifierValueEmpty,
+    NTYTDSLErrorReasonDetachedNegativeMarker,
+    NTYTDSLErrorReasonRegexModifierMissingClosingBrace,
+    NTYTDSLErrorReasonModifierMissingClosingBrace,
+    NTYTDSLErrorReasonMatcherRequired,
+    NTYTDSLErrorReasonModifierAfterMain,
+    NTYTDSLErrorReasonMalformedRegexLiteral,
+    NTYTDSLErrorReasonRegexIncompleteEscape,
+    NTYTDSLErrorReasonRegexMissingClosingDelimiter,
+    NTYTDSLErrorReasonEmptyRegex,
+    NTYTDSLErrorReasonUnsupportedRegexFlag,
+    NTYTDSLErrorReasonDuplicateRegexFlag,
+    NTYTDSLErrorReasonRegexCompileFailed,
+    NTYTDSLErrorReasonPlainMatcherIncompleteEscape,
+};
+
+FOUNDATION_EXPORT NSErrorUserInfoKey const NTYTDSLErrorReasonKey;
+FOUNDATION_EXPORT NSErrorUserInfoKey const NTYTDSLErrorModifierNameKey;
+FOUNDATION_EXPORT NSErrorUserInfoKey const NTYTDSLErrorRegexFlagKey;
+
 @interface NTYTDSLParser : NSObject
 
 + (nullable NTYTRuntimeRule *)parseExpression:(NSString *)rawExpression

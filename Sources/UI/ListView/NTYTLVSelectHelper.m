@@ -2,6 +2,7 @@
 #import "UI/NTYTListEditingAdapter.h"
 #import "NTYTLVDeleteFlowHelper.h"
 #import "NTYTLVPrivate.h"
+#import "Localization/NTYTUIStrings.h"
 
 @implementation NTYTRuleListViewController (NTYTLVSelectHelper)
 
@@ -33,7 +34,7 @@
     BOOL mutable = [self.editingAdapter mutationsAllowed];
     selectAll.enabled = mutable && self.tableView.editing && total > 0;
     deleteButton.enabled = mutable && selected > 0;
-    selectAll.title = (total > 0 && selected == total) ? @"Deselect All" : @"Select All";
+    selectAll.title = (total > 0 && selected == total) ? NTYTDeselectAllTitle() : NTYTSelectAllTitle();
 }
 
 - (void)selectAllToolbarButtonTapped {
