@@ -27,43 +27,51 @@
                                  metadata:(NTYTContentMetadata *)metadata
                           internalFailure:(BOOL *)internalFailure;
 + (NTYTMatchResult)evaluateModifier:(NTYTModifier *)modifier
-                         owningListKind:(NTYTListKind)owningListKind
+                     owningListKind:(NTYTListKind)owningListKind
                            metadata:(NTYTContentMetadata *)metadata
                            snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot
                     internalFailure:(BOOL *)internalFailure;
 + (nullable NTYTMatchOptions *)modifierOptionsForKind:(NTYTModifierKind)modifierKind
-                                            owningListKind:(NTYTListKind)owningListKind
+                                        owningListKind:(NTYTListKind)owningListKind
                                               snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot
                                        internalFailure:(BOOL *)internalFailure;
++ (nullable NTYTMetadataValue *)generalTargetForMetadata:(NTYTContentMetadata *)metadata
+                                         internalFailure:(BOOL *)internalFailure;
 + (NTYTMatchResult)evaluateExpression:(NTYTMatcherExpression *)expression
-                            candidate:(nullable NSString *)candidate
-                              options:(NTYTMatchOptions *)options
+                                value:(NTYTMetadataValue *)value
+                              options:(nullable NTYTMatchOptions *)options
                       internalFailure:(BOOL *)internalFailure;
-+ (NTYTMatchResult)evaluateChannelExpression:(NTYTMatcherExpression *)expression
-                                    metadata:(NTYTContentMetadata *)metadata
-                                     options:(NTYTMatchOptions *)options
-                             internalFailure:(BOOL *)internalFailure;
++ (NTYTMatchResult)evaluateAggregatedExpression:(NTYTMatcherExpression *)expression
+                                          values:(NSArray<NTYTMetadataValue *> *)values
+                                         options:(nullable NTYTMatchOptions *)options
+                                 internalFailure:(BOOL *)internalFailure;
 + (NTYTMatchResult)evaluatePositiveMatcher:(NTYTMatcher *)matcher
-                                  candidate:(nullable NSString *)candidate
-                                    options:(NTYTMatchOptions *)options
+                                      value:(NTYTMetadataValue *)value
+                                    options:(nullable NTYTMatchOptions *)options
                             internalFailure:(BOOL *)internalFailure;
 
 @end
+
 
 @implementation NTYTEvaluator
 
 + (NTYTDecision)decisionForMetadata:(NTYTContentMetadata *)metadata
                             snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
-    if (!metadata || !snapshot) {
+    if (!metadata || !snapshot || metadata.contentType == NTYTContentTypeUnresolved) {
         return NTYTDecisionNoMatch;
     }
 
     @try {
+        if (metadata.contentType == NTYTContentTypePlaylistMix && snapshot.hideMix) {
+            return NTYTDecisionBlock;
+        }
+
         BOOL internalFailure = NO;
         NTYTMatchResult allowResult =
             [self evaluatePhaseLists:@[
                 @(NTYTListIDGeneralAllow),
                 @(NTYTListIDChannelsAllow),
+                @(NTYTListIDGlobalAllow),
             ]
                              metadata:metadata
                              snapshot:snapshot
@@ -85,6 +93,12 @@
                 @(NTYTListIDVideosChannel),
                 @(NTYTListIDVideosID),
                 @(NTYTListIDChannelsBlock),
+                @(NTYTListIDPostContent),
+                @(NTYTListIDPostChannel),
+                @(NTYTListIDPlaylistTitle),
+                @(NTYTListIDPlaylistChannel),
+                @(NTYTListIDPlaylistID),
+                @(NTYTListIDGlobalBlock),
             ]
                              metadata:metadata
                              snapshot:snapshot
@@ -107,16 +121,15 @@
     BOOL sawUnavailable = NO;
     for (NSNumber *listNumber in listIDs) {
         NTYTListID listID = (NTYTListID)listNumber.integerValue;
-        NTYTListDefinition *definition =
-            [NTYTListDefinition definitionForListID:listID];
+        NTYTListDefinition *definition = [NTYTListDefinition definitionForListID:listID];
         NTYTRuntimeListState *state = [snapshot stateForListID:listID];
-        if (!definition ||
-            !state ||
-            state.listID != listID ||
-            !state.options ||
-            !state.rules) {
+        if (!definition || !state || state.listID != listID || !state.options || !state.rules) {
             *internalFailure = YES;
             return NTYTMatchResultNoMatch;
+        }
+
+        if (![definition appliesToContentType:metadata.contentType]) {
+            continue;
         }
 
         NTYTMatchResult result = [self evaluateList:state
@@ -169,11 +182,8 @@
                        metadata:(NTYTContentMetadata *)metadata
                        snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot
                 internalFailure:(BOOL *)internalFailure {
-    if (!rule.identifier ||
-        !rule.mainMatcher ||
-        !rule.modifiers ||
-        !options ||
-        !snapshot) {
+    if (!rule.identifier || !rule.mainMatcher || !rule.modifiers ||
+        !definition || !options || !snapshot) {
         *internalFailure = YES;
         return NTYTMatchResultNoMatch;
     }
@@ -193,7 +203,7 @@
     for (NTYTModifier *modifier in rule.modifiers) {
         NTYTMatchResult modifierResult =
             [self evaluateModifier:modifier
-                        owningListKind:definition.listKind
+                    owningListKind:definition.listKind
                           metadata:metadata
                           snapshot:snapshot
                    internalFailure:internalFailure];
@@ -213,31 +223,63 @@
                                  metadata:(NTYTContentMetadata *)metadata
                           internalFailure:(BOOL *)internalFailure {
     switch (targetKind) {
+        case NTYTTargetKindGeneral: {
+            NTYTMetadataValue *value = [self generalTargetForMetadata:metadata
+                                                      internalFailure:internalFailure];
+            if (*internalFailure || !value) {
+                return NTYTMatchResultNoMatch;
+            }
+            return [self evaluateExpression:expression value:value options:options
+                            internalFailure:internalFailure];
+        }
         case NTYTTargetKindTitle:
-            return [self evaluateExpression:expression
-                                  candidate:metadata.title
-                                    options:options
+            return [self evaluateExpression:expression value:metadata.title options:options
                             internalFailure:internalFailure];
         case NTYTTargetKindChannel:
-            return [self evaluateChannelExpression:expression
-                                          metadata:metadata
-                                           options:options
-                                   internalFailure:internalFailure];
+            return [self evaluateAggregatedExpression:expression
+                                               values:@[metadata.channelID,
+                                                        metadata.channelName,
+                                                        metadata.handle]
+                                              options:options
+                                      internalFailure:internalFailure];
         case NTYTTargetKindVideoID:
-            return [self evaluateExpression:expression
-                                  candidate:metadata.videoID
-                                    options:options
+            return [self evaluateExpression:expression value:metadata.videoID options:options
                             internalFailure:internalFailure];
+        case NTYTTargetKindPostBody:
+            return [self evaluateExpression:expression value:metadata.postBody options:options
+                            internalFailure:internalFailure];
+        case NTYTTargetKindPlaylistID:
+            return [self evaluateExpression:expression value:metadata.playlistID options:options
+                            internalFailure:internalFailure];
+        case NTYTTargetKindGlobal: {
+            NTYTMetadataValue *general = [self generalTargetForMetadata:metadata
+                                                         internalFailure:internalFailure];
+            if (*internalFailure || !general) {
+                return NTYTMatchResultNoMatch;
+            }
+            return [self evaluateAggregatedExpression:expression
+                                               values:@[general,
+                                                        metadata.channelID,
+                                                        metadata.channelName,
+                                                        metadata.handle]
+                                              options:options
+                                      internalFailure:internalFailure];
+        }
     }
     *internalFailure = YES;
     return NTYTMatchResultNoMatch;
 }
 
 + (NTYTMatchResult)evaluateModifier:(NTYTModifier *)modifier
-                         owningListKind:(NTYTListKind)owningListKind
+                     owningListKind:(NTYTListKind)owningListKind
                            metadata:(NTYTContentMetadata *)metadata
                            snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot
                     internalFailure:(BOOL *)internalFailure {
+    if (!modifier) {
+        *internalFailure = YES;
+        return NTYTMatchResultNoMatch;
+    }
+
     NTYTMatchResult result = NTYTMatchResultNoMatch;
     switch (modifier.kind) {
         case NTYTModifierKindChannel: {
@@ -248,17 +290,19 @@
             NTYTMatchOptions *options = nil;
             if (modifier.matcherExpression.matcher.kind == NTYTMatcherKindPlain) {
                 options = [self modifierOptionsForKind:modifier.kind
-                                     owningListKind:owningListKind
-                                       snapshot:snapshot
-                                internalFailure:internalFailure];
+                                       owningListKind:owningListKind
+                                             snapshot:snapshot
+                                      internalFailure:internalFailure];
                 if (*internalFailure || !options) {
                     return NTYTMatchResultNoMatch;
                 }
             }
-            result = [self evaluateChannelExpression:modifier.matcherExpression
-                                            metadata:metadata
-                                             options:options
-                                     internalFailure:internalFailure];
+            result = [self evaluateAggregatedExpression:modifier.matcherExpression
+                                                  values:@[metadata.channelID,
+                                                           metadata.channelName,
+                                                           metadata.handle]
+                                                 options:options
+                                         internalFailure:internalFailure];
             break;
         }
         case NTYTModifierKindContent: {
@@ -269,28 +313,44 @@
             NTYTMatchOptions *options = nil;
             if (modifier.matcherExpression.matcher.kind == NTYTMatcherKindPlain) {
                 options = [self modifierOptionsForKind:modifier.kind
-                                     owningListKind:owningListKind
-                                       snapshot:snapshot
-                                internalFailure:internalFailure];
+                                       owningListKind:owningListKind
+                                             snapshot:snapshot
+                                      internalFailure:internalFailure];
                 if (*internalFailure || !options) {
                     return NTYTMatchResultNoMatch;
                 }
             }
+            NTYTMetadataValue *general = [self generalTargetForMetadata:metadata
+                                                         internalFailure:internalFailure];
+            if (*internalFailure || !general) {
+                return NTYTMatchResultNoMatch;
+            }
             result = [self evaluateExpression:modifier.matcherExpression
-                                    candidate:metadata.title
+                                        value:general
                                       options:options
                               internalFailure:internalFailure];
             break;
         }
         case NTYTModifierKindVideo:
+        case NTYTModifierKindPost:
+        case NTYTModifierKindPlaylist:
             if (modifier.matcherExpression) {
                 *internalFailure = YES;
                 return NTYTMatchResultNoMatch;
             }
-            result = metadata.contentType == NTYTContentTypeVideo
-                ? NTYTMatchResultMatch
-                : NTYTMatchResultNoMatch;
+            if (modifier.kind == NTYTModifierKindVideo) {
+                result = metadata.contentType == NTYTContentTypeVideo
+                    ? NTYTMatchResultMatch : NTYTMatchResultNoMatch;
+            } else if (modifier.kind == NTYTModifierKindPost) {
+                result = metadata.contentType == NTYTContentTypePost
+                    ? NTYTMatchResultMatch : NTYTMatchResultNoMatch;
+            } else {
+                BOOL playlist = metadata.contentType == NTYTContentTypePlaylistNormal ||
+                                metadata.contentType == NTYTContentTypePlaylistMix;
+                result = playlist ? NTYTMatchResultMatch : NTYTMatchResultNoMatch;
+            }
             break;
+
         default:
             *internalFailure = YES;
             return NTYTMatchResultNoMatch;
@@ -301,18 +361,18 @@
     return modifier.isNegative ? NTYTNegateMatchResult(result) : result;
 }
 
-+ (nullable NTYTMatchOptions *)modifierOptionsForKind:(NTYTModifierKind)modifierKind
-                                   owningListKind:(NTYTListKind)owningListKind
++ (NTYTMatchOptions *)modifierOptionsForKind:(NTYTModifierKind)modifierKind
+                               owningListKind:(NTYTListKind)owningListKind
                                      snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot
                               internalFailure:(BOOL *)internalFailure {
     BOOL allowPhase = NO;
     switch (owningListKind) {
         case NTYTListKindBlock:
-            allowPhase = NO;
             break;
         case NTYTListKindAllow:
             allowPhase = YES;
             break;
+
         default:
             *internalFailure = YES;
             return nil;
@@ -321,76 +381,73 @@
     NTYTListID optionsListID;
     switch (modifierKind) {
         case NTYTModifierKindChannel:
-            optionsListID = allowPhase
-                ? NTYTListIDChannelsAllow
-                : NTYTListIDChannelsBlock;
+            optionsListID = allowPhase ? NTYTListIDChannelsAllow : NTYTListIDChannelsBlock;
             break;
         case NTYTModifierKindContent:
-            optionsListID = allowPhase
-                ? NTYTListIDGeneralAllow
-                : NTYTListIDGeneralBlock;
+            optionsListID = allowPhase ? NTYTListIDGeneralAllow : NTYTListIDGeneralBlock;
             break;
         case NTYTModifierKindVideo:
+        case NTYTModifierKindPost:
+        case NTYTModifierKindPlaylist:
+            *internalFailure = YES;
+            return nil;
+
         default:
             *internalFailure = YES;
             return nil;
     }
 
     NTYTRuntimeListState *state = [snapshot stateForListID:optionsListID];
-    if (!state ||
-        state.listID != optionsListID ||
-        !state.options) {
+    if (!state || state.listID != optionsListID || !state.options) {
         *internalFailure = YES;
         return nil;
     }
     return state.options;
 }
 
-+ (NTYTMatchResult)evaluateExpression:(NTYTMatcherExpression *)expression
-                            candidate:(NSString *)candidate
-                              options:(NTYTMatchOptions *)options
-                      internalFailure:(BOOL *)internalFailure {
-    if (!expression || !expression.matcher) {
-        *internalFailure = YES;
-        return NTYTMatchResultNoMatch;
++ (NTYTMetadataValue *)generalTargetForMetadata:(NTYTContentMetadata *)metadata
+                                internalFailure:(BOOL *)internalFailure {
+    switch (metadata.contentType) {
+        case NTYTContentTypeVideo:
+        case NTYTContentTypePlaylistNormal:
+        case NTYTContentTypePlaylistMix:
+            return metadata.title;
+        case NTYTContentTypePost:
+            return metadata.postBody;
+        case NTYTContentTypeUnresolved:
+            *internalFailure = YES;
+            return nil;
     }
-    NTYTMatchResult positive =
-        [self evaluatePositiveMatcher:expression.matcher
-                            candidate:candidate
-                              options:options
-                      internalFailure:internalFailure];
-    if (*internalFailure) {
-        return NTYTMatchResultNoMatch;
-    }
-    return expression.isNegative ? NTYTNegateMatchResult(positive) : positive;
+    *internalFailure = YES;
+    return nil;
 }
 
-+ (NTYTMatchResult)evaluateChannelExpression:(NTYTMatcherExpression *)expression
-                                    metadata:(NTYTContentMetadata *)metadata
-                                     options:(NTYTMatchOptions *)options
-                             internalFailure:(BOOL *)internalFailure {
-    if (!expression || !expression.matcher) {
++ (NTYTMatchResult)evaluateExpression:(NTYTMatcherExpression *)expression
+                                value:(NTYTMetadataValue *)value
+                              options:(NTYTMatchOptions *)options
+                      internalFailure:(BOOL *)internalFailure {
+    return [self evaluateAggregatedExpression:expression
+                                       values:value ? @[value] : @[]
+                                      options:options
+                              internalFailure:internalFailure];
+}
+
++ (NTYTMatchResult)evaluateAggregatedExpression:(NTYTMatcherExpression *)expression
+                                          values:(NSArray<NTYTMetadataValue *> *)values
+                                         options:(NTYTMatchOptions *)options
+                                 internalFailure:(BOOL *)internalFailure {
+    if (!expression || !expression.matcher || values.count == 0) {
         *internalFailure = YES;
         return NTYTMatchResultNoMatch;
     }
 
-    NSArray *fields = @[
-        metadata.channelID ?: [NSNull null],
-        metadata.channelName ?: [NSNull null],
-        metadata.handle ?: [NSNull null],
-    ];
-    BOOL hasAvailableField = NO;
+    BOOL sawUnavailable = NO;
     NTYTMatchResult aggregate = NTYTMatchResultNoMatch;
-    for (id field in fields) {
-        if (field == [NSNull null]) {
-            continue;
-        }
-        hasAvailableField = YES;
-        NTYTMatchResult fieldResult =
-            [self evaluatePositiveMatcher:expression.matcher
-                                candidate:(NSString *)field
-                                  options:options
-                          internalFailure:internalFailure];
+    for (NTYTMetadataValue *value in values) {
+        NTYTMatchResult fieldResult = [self evaluatePositiveMatcher:expression.matcher
+                                                              value:value
+                                                            options:options
+                                                    internalFailure:internalFailure];
         if (*internalFailure) {
             return NTYTMatchResultNoMatch;
         }
@@ -398,23 +455,42 @@
             aggregate = NTYTMatchResultMatch;
             break;
         }
+        if (fieldResult == NTYTMatchResultUnavailable) {
+            sawUnavailable = YES;
+        }
     }
-    if (!hasAvailableField) {
+    if (aggregate != NTYTMatchResultMatch && sawUnavailable) {
         aggregate = NTYTMatchResultUnavailable;
     }
     return expression.isNegative ? NTYTNegateMatchResult(aggregate) : aggregate;
 }
 
 + (NTYTMatchResult)evaluatePositiveMatcher:(NTYTMatcher *)matcher
-                                  candidate:(NSString *)candidate
+                                      value:(NTYTMetadataValue *)value
                                     options:(NTYTMatchOptions *)options
                             internalFailure:(BOOL *)internalFailure {
-    if (!matcher) {
+    if (!matcher || !value) {
         *internalFailure = YES;
         return NTYTMatchResultNoMatch;
     }
-    if (candidate == nil) {
-        return NTYTMatchResultUnavailable;
+
+    switch (value.state) {
+        case NTYTMetadataValueStateAbsent:
+            return NTYTMatchResultNoMatch;
+        case NTYTMetadataValueStateUnavailable:
+            return NTYTMatchResultUnavailable;
+        case NTYTMetadataValueStateAvailable:
+            break;
+
+        default:
+            *internalFailure = YES;
+            return NTYTMatchResultNoMatch;
+    }
+
+    NSString *candidate = value.value;
+    if (![candidate isKindOfClass:[NSString class]]) {
+        *internalFailure = YES;
+        return NTYTMatchResultNoMatch;
     }
 
     switch (matcher.kind) {
@@ -427,14 +503,9 @@
             if (!options.caseSensitive) {
                 compareOptions |= NSCaseInsensitiveSearch;
             }
-            BOOL matched = NO;
-            if (options.exactMatch) {
-                matched = [candidate compare:matcher.plainText
-                                     options:compareOptions] == NSOrderedSame;
-            } else {
-                matched = [candidate rangeOfString:matcher.plainText
-                                           options:compareOptions].location != NSNotFound;
-            }
+            BOOL matched = options.exactMatch
+                ? [candidate compare:matcher.plainText options:compareOptions] == NSOrderedSame
+                : [candidate rangeOfString:matcher.plainText options:compareOptions].location != NSNotFound;
             return matched ? NTYTMatchResultMatch : NTYTMatchResultNoMatch;
         }
         case NTYTMatcherKindRegex: {
@@ -444,9 +515,7 @@
             }
             NSRange range = NSMakeRange(0, candidate.length);
             NSTextCheckingResult *match =
-                [matcher.regularExpression firstMatchInString:candidate
-                                                      options:0
-                                                        range:range];
+                [matcher.regularExpression firstMatchInString:candidate options:0 range:range];
             return match ? NTYTMatchResultMatch : NTYTMatchResultNoMatch;
         }
     }

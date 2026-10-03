@@ -23,6 +23,7 @@
 - (instancetype)initWithListID:(NTYTListID)listID
                       listKind:(NTYTListKind)listKind
                     targetKind:(NTYTTargetKind)targetKind
+        applicableContentTypes:(NSSet<NSNumber *> *)applicableContentTypes
                    storagePath:(NSArray<NSString *> *)storagePath
               supportedOptions:(NSSet<NSNumber *> *)supportedOptions
                 defaultOptions:(NTYTMatchOptions *)defaultOptions;
@@ -34,6 +35,7 @@
 - (instancetype)initWithListID:(NTYTListID)listID
                       listKind:(NTYTListKind)listKind
                     targetKind:(NTYTTargetKind)targetKind
+        applicableContentTypes:(NSSet<NSNumber *> *)applicableContentTypes
                    storagePath:(NSArray<NSString *> *)storagePath
               supportedOptions:(NSSet<NSNumber *> *)supportedOptions
                 defaultOptions:(NTYTMatchOptions *)defaultOptions {
@@ -42,11 +44,16 @@
         _listID = listID;
         _listKind = listKind;
         _targetKind = targetKind;
+        _applicableContentTypes = [applicableContentTypes copy];
         _storagePath = [storagePath copy];
         _supportedOptions = [supportedOptions copy];
         _defaultOptions = defaultOptions;
     }
     return self;
+}
+
+- (BOOL)appliesToContentType:(NTYTContentType)contentType {
+    return [self.applicableContentTypes containsObject:@(contentType)];
 }
 
 - (BOOL)supportsOption:(NTYTListOptionID)optionID {
@@ -72,6 +79,18 @@
             @(NTYTListOptionIDExactMatch),
         ]];
         NSSet<NSNumber *> *noOptions = [NSSet set];
+        NSSet<NSNumber *> *allContentTypes = [NSSet setWithArray:@[
+            @(NTYTContentTypeVideo),
+            @(NTYTContentTypePost),
+            @(NTYTContentTypePlaylistNormal),
+            @(NTYTContentTypePlaylistMix),
+        ]];
+        NSSet<NSNumber *> *videoContentTypes = [NSSet setWithObject:@(NTYTContentTypeVideo)];
+        NSSet<NSNumber *> *postContentTypes = [NSSet setWithObject:@(NTYTContentTypePost)];
+        NSSet<NSNumber *> *playlistContentTypes = [NSSet setWithArray:@[
+            @(NTYTContentTypePlaylistNormal),
+            @(NTYTContentTypePlaylistMix),
+        ]];
 
         NTYTMatchOptions *offOff =
             [[NTYTMatchOptions alloc] initWithCaseSensitive:NO exactMatch:NO];
@@ -83,46 +102,102 @@
         definitions = @[
             [[self alloc] initWithListID:NTYTListIDGeneralBlock
                                 listKind:NTYTListKindBlock
-                              targetKind:NTYTTargetKindTitle
+                              targetKind:NTYTTargetKindGeneral
+                  applicableContentTypes:allContentTypes
                              storagePath:@[@"general", @"block"]
                         supportedOptions:plainOptions
                           defaultOptions:offOff],
             [[self alloc] initWithListID:NTYTListIDGeneralAllow
                                 listKind:NTYTListKindAllow
-                              targetKind:NTYTTargetKindTitle
+                              targetKind:NTYTTargetKindGeneral
+                  applicableContentTypes:allContentTypes
                              storagePath:@[@"general", @"allow"]
                         supportedOptions:plainOptions
                           defaultOptions:offOff],
             [[self alloc] initWithListID:NTYTListIDVideosTitle
                                 listKind:NTYTListKindBlock
                               targetKind:NTYTTargetKindTitle
+                  applicableContentTypes:videoContentTypes
                              storagePath:@[@"videos", @"title"]
                         supportedOptions:plainOptions
                           defaultOptions:offOff],
             [[self alloc] initWithListID:NTYTListIDVideosChannel
                                 listKind:NTYTListKindBlock
                               targetKind:NTYTTargetKindChannel
+                  applicableContentTypes:videoContentTypes
                              storagePath:@[@"videos", @"channel"]
                         supportedOptions:plainOptions
                           defaultOptions:offOn],
             [[self alloc] initWithListID:NTYTListIDVideosID
                                 listKind:NTYTListKindBlock
                               targetKind:NTYTTargetKindVideoID
+                  applicableContentTypes:videoContentTypes
                              storagePath:@[@"videos", @"id"]
                         supportedOptions:noOptions
                           defaultOptions:onOn],
             [[self alloc] initWithListID:NTYTListIDChannelsBlock
                                 listKind:NTYTListKindBlock
                               targetKind:NTYTTargetKindChannel
+                  applicableContentTypes:allContentTypes
                              storagePath:@[@"channels", @"block"]
                         supportedOptions:plainOptions
                           defaultOptions:offOn],
             [[self alloc] initWithListID:NTYTListIDChannelsAllow
                                 listKind:NTYTListKindAllow
                               targetKind:NTYTTargetKindChannel
+                  applicableContentTypes:allContentTypes
                              storagePath:@[@"channels", @"allow"]
                         supportedOptions:plainOptions
                           defaultOptions:offOn],
+            [[self alloc] initWithListID:NTYTListIDPostContent
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindPostBody
+                  applicableContentTypes:postContentTypes
+                             storagePath:@[@"posts", @"content"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOff],
+            [[self alloc] initWithListID:NTYTListIDPostChannel
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindChannel
+                  applicableContentTypes:postContentTypes
+                             storagePath:@[@"posts", @"channel"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOn],
+            [[self alloc] initWithListID:NTYTListIDPlaylistTitle
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindTitle
+                  applicableContentTypes:playlistContentTypes
+                             storagePath:@[@"playlists", @"title"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOff],
+            [[self alloc] initWithListID:NTYTListIDPlaylistChannel
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindChannel
+                  applicableContentTypes:playlistContentTypes
+                             storagePath:@[@"playlists", @"channel"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOn],
+            [[self alloc] initWithListID:NTYTListIDPlaylistID
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindPlaylistID
+                  applicableContentTypes:playlistContentTypes
+                             storagePath:@[@"playlists", @"id"]
+                        supportedOptions:noOptions
+                          defaultOptions:onOn],
+            [[self alloc] initWithListID:NTYTListIDGlobalBlock
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindGlobal
+                  applicableContentTypes:allContentTypes
+                             storagePath:@[@"global", @"block"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOff],
+            [[self alloc] initWithListID:NTYTListIDGlobalAllow
+                                listKind:NTYTListKindAllow
+                              targetKind:NTYTTargetKindGlobal
+                  applicableContentTypes:allContentTypes
+                             storagePath:@[@"global", @"allow"]
+                        supportedOptions:plainOptions
+                          defaultOptions:offOff],
         ];
     });
     return definitions;

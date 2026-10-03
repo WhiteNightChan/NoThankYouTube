@@ -27,6 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)mutationsAllowed;
 - (NSArray<NTYTStoredRule *> *)rulesForListID:(NTYTListID)listID;
 - (BOOL)effectiveValueForOption:(NTYTListOptionID)optionID listID:(NTYTListID)listID;
+- (BOOL)hideMixEnabled;
 
 - (NTYTMutationResult *)addExpression:(NSString *)rawExpression listID:(NTYTListID)listID;
 - (NTYTMutationResult *)editRuleID:(NSUUID *)ruleID
@@ -40,6 +41,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (NTYTMutationResult *)setEffectiveValue:(BOOL)value
                                 forOption:(NTYTListOptionID)optionID
                                     listID:(NTYTListID)listID;
+- (NTYTMutationResult *)setHideMixEnabled:(BOOL)enabled;
 
 @end
 

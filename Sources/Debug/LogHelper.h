@@ -13,4 +13,10 @@ NS_ASSUME_NONNULL_BEGIN
 NS_ASSUME_NONNULL_END
 
 #define NTYTLog(fmt, ...) \
-    [LogHelper appendLine:[NSString stringWithFormat:(fmt), ##__VA_ARGS__]]
+    do { \
+        @try { \
+            [LogHelper appendLine: \
+                [NSString stringWithFormat:(fmt), ##__VA_ARGS__]]; \
+        } @catch (__unused NSException *exception) { \
+        } \
+    } while (0)

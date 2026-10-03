@@ -29,8 +29,10 @@ NS_ASSUME_NONNULL_BEGIN
 @interface NTYTStoredSettings : NSObject
 
 @property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTStoredList *> *lists;
+@property(nonatomic, readonly) BOOL hideMix;
 
-- (instancetype)initWithLists:(NSDictionary<NSNumber *, NTYTStoredList *> *)lists NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithLists:(NSDictionary<NSNumber *, NTYTStoredList *> *)lists
+                       hideMix:(BOOL)hideMix NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 - (NTYTStoredList *)listForID:(NTYTListID)listID;
 + (instancetype)emptySettings;
@@ -64,10 +66,12 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly, getter=isAbsent) BOOL absent;
 @property(nonatomic, readonly) BOOL baseDegraded;
 @property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTRawList *> *lists;
+@property(nonatomic, readonly) BOOL hideMix;
 
 - (instancetype)initWithAbsent:(BOOL)absent
                   baseDegraded:(BOOL)baseDegraded
-                         lists:(NSDictionary<NSNumber *, NTYTRawList *> *)lists NS_DESIGNATED_INITIALIZER;
+                         lists:(NSDictionary<NSNumber *, NTYTRawList *> *)lists
+                       hideMix:(BOOL)hideMix NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end

@@ -31,10 +31,12 @@
 
 @implementation NTYTStoredSettings
 
-- (instancetype)initWithLists:(NSDictionary<NSNumber *,NTYTStoredList *> *)lists {
+- (instancetype)initWithLists:(NSDictionary<NSNumber *,NTYTStoredList *> *)lists
+                       hideMix:(BOOL)hideMix {
     self = [super init];
     if (self) {
         _lists = [lists copy];
+        _hideMix = hideMix;
     }
     return self;
 }
@@ -50,7 +52,7 @@
         lists[@(definition.listID)] =
             [[NTYTStoredList alloc] initWithOptionOverrides:@{} rules:@[]];
     }
-    return [[self alloc] initWithLists:lists];
+    return [[self alloc] initWithLists:lists hideMix:NO];
 }
 
 @end
@@ -86,12 +88,14 @@
 
 - (instancetype)initWithAbsent:(BOOL)absent
                   baseDegraded:(BOOL)baseDegraded
-                         lists:(NSDictionary<NSNumber *,NTYTRawList *> *)lists {
+                         lists:(NSDictionary<NSNumber *,NTYTRawList *> *)lists
+                       hideMix:(BOOL)hideMix {
     self = [super init];
     if (self) {
         _absent = absent;
         _baseDegraded = baseDegraded;
         _lists = [lists copy];
+        _hideMix = hideMix;
     }
     return self;
 }

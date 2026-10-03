@@ -6,6 +6,9 @@ typedef NS_ENUM(NSUInteger, NTYTSettingsCategoryPage) {
     NTYTSettingsCategoryPageGeneral = 0,
     NTYTSettingsCategoryPageVideos = 1,
     NTYTSettingsCategoryPageChannels = 2,
+    NTYTSettingsCategoryPagePosts = 3,
+    NTYTSettingsCategoryPagePlaylists = 4,
+    NTYTSettingsCategoryPageGlobal = 5,
 };
 
 @interface NTYTCategoryViewController : UITableViewController

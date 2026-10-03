@@ -16,6 +16,20 @@ NSString *NTYTListTitle(NTYTListID listID) {
             return @"Block";
         case NTYTListIDChannelsAllow:
             return @"Allow";
+        case NTYTListIDPostContent:
+            return @"Content";
+        case NTYTListIDPostChannel:
+            return @"Channel";
+        case NTYTListIDPlaylistTitle:
+            return @"Title";
+        case NTYTListIDPlaylistChannel:
+            return @"Channel";
+        case NTYTListIDPlaylistID:
+            return @"Playlist ID";
+        case NTYTListIDGlobalBlock:
+            return @"Block";
+        case NTYTListIDGlobalAllow:
+            return @"Allow";
     }
     return @"Rules";
 }
@@ -28,6 +42,12 @@ NSString *NTYTCategoryTitle(NSUInteger categoryIndex) {
             return @"Video";
         case 2:
             return @"Channel";
+        case 3:
+            return @"Post";
+        case 4:
+            return @"Playlist";
+        case 5:
+            return @"Global";
         default:
             return @"NoThankYouTube";
     }

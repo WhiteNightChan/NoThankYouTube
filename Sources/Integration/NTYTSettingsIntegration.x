@@ -187,12 +187,18 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
     id general = NTYTSectionItemForPage(NTYTSettingsCategoryPageGeneral);
     id videos = NTYTSectionItemForPage(NTYTSettingsCategoryPageVideos);
     id channels = NTYTSectionItemForPage(NTYTSettingsCategoryPageChannels);
+    id posts = NTYTSectionItemForPage(NTYTSettingsCategoryPagePosts);
+    id playlists = NTYTSectionItemForPage(NTYTSettingsCategoryPagePlaylists);
+    id global = NTYTSectionItemForPage(NTYTSettingsCategoryPageGlobal);
 
-    if (!general || !videos || !channels) {
-        NTYTLog(@"[SettingsIntegration] install failed: section items general=%@ videos=%@ channels=%@",
+    if (!general || !videos || !channels || !posts || !playlists || !global) {
+        NTYTLog(@"[SettingsIntegration] install failed: section items general=%@ videos=%@ channels=%@ posts=%@ playlists=%@ global=%@",
                 general ? @"OK" : @"nil",
                 videos ? @"OK" : @"nil",
-                channels ? @"OK" : @"nil");
+                channels ? @"OK" : @"nil",
+                posts ? @"OK" : @"nil",
+                playlists ? @"OK" : @"nil",
+                global ? @"OK" : @"nil");
         return NO;
     }
 
@@ -202,7 +208,7 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
         return NO;
     }
 
-    NSArray *items = @[general, videos, channels];
+    NSArray *items = @[global, general, videos, channels, posts, playlists];
 
     SEL modern = @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:);
     if ([controller respondsToSelector:modern]) {

@@ -37,6 +37,8 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)matcherModifierWithKind:(NTYTModifierKind)kind
                                 negative:(BOOL)negative
                        matcherExpression:(NTYTMatcherExpression *)matcherExpression;
++ (instancetype)predicateModifierWithKind:(NTYTModifierKind)kind
+                                  negative:(BOOL)negative;
 + (instancetype)videoModifierNegative:(BOOL)negative;
 - (instancetype)init NS_UNAVAILABLE;
 
@@ -71,8 +73,10 @@ NS_ASSUME_NONNULL_BEGIN
 @interface NTYTRuntimeSettingsSnapshot : NSObject
 
 @property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTRuntimeListState *> *listStates;
+@property(nonatomic, readonly) BOOL hideMix;
 
-- (instancetype)initWithListStates:(NSDictionary<NSNumber *, NTYTRuntimeListState *> *)listStates NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithListStates:(NSDictionary<NSNumber *, NTYTRuntimeListState *> *)listStates
+                            hideMix:(BOOL)hideMix NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 - (nullable NTYTRuntimeListState *)stateForListID:(NTYTListID)listID;
 + (instancetype)emptySnapshot;
