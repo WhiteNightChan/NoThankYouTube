@@ -25,6 +25,20 @@ static NSString *NTYTMetadataLogValue(NTYTMetadataValue *metadataValue) {
     return @"<invalid>";
 }
 
+static NSString *NTYTChannelCollectionLogValue(NTYTChannelIdentityCollection *collection) {
+    if (collection.state == NTYTChannelIdentityCollectionStateUnavailable) {
+        return @"<unavailable>";
+    }
+    NSMutableArray<NSString *> *entries = [NSMutableArray array];
+    for (NTYTChannelIdentity *identity in collection.identities) {
+        [entries addObject:[NSString stringWithFormat:@"{%@ | %@ | %@}",
+                            NTYTMetadataLogValue(identity.channelID),
+                            NTYTMetadataLogValue(identity.channelName),
+                            NTYTMetadataLogValue(identity.handle)]];
+    }
+    return [entries componentsJoinedByString:@", "];
+}
+
 @implementation NTYTProductionFilter
 
 + (nullable YTIElementRenderer *)elementRendererFromContentEntry:(id)entry {
@@ -77,16 +91,14 @@ static NSString *NTYTMetadataLogValue(NTYTMetadataValue *metadataValue) {
         NTYTDecision decision =
             [NTYTEvaluator decisionForMetadata:metadata snapshot:snapshot];
 
-        NTYTLog(@"[Filter] child=%lu type=%ld videoID=%@ title=%@ postBody=%@ playlistID=%@ channelID=%@ channelName=%@ handle=%@ decision=%ld",
+        NTYTLog(@"[Filter] child=%lu type=%ld videoID=%@ title=%@ postBody=%@ playlistID=%@ channels=[%@] decision=%ld",
                 (unsigned long)childIndex,
                 (long)metadata.contentType,
                 NTYTMetadataLogValue(metadata.videoID),
                 NTYTMetadataLogValue(metadata.title),
                 NTYTMetadataLogValue(metadata.postBody),
                 NTYTMetadataLogValue(metadata.playlistID),
-                NTYTMetadataLogValue(metadata.channelID),
-                NTYTMetadataLogValue(metadata.channelName),
-                NTYTMetadataLogValue(metadata.handle),
+                NTYTChannelCollectionLogValue(metadata.channelIdentityCollection),
                 (long)decision);
 
         return decision == NTYTDecisionBlock;

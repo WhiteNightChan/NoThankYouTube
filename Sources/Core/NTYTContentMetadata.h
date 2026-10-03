@@ -16,6 +16,35 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@interface NTYTChannelIdentity : NSObject
+
+@property(nonatomic, strong, readonly) NTYTMetadataValue *channelID;
+@property(nonatomic, strong, readonly) NTYTMetadataValue *channelName;
+@property(nonatomic, strong, readonly) NTYTMetadataValue *handle;
+
+- (instancetype)initWithChannelID:(NTYTMetadataValue *)channelID
+                      channelName:(NTYTMetadataValue *)channelName
+                           handle:(NTYTMetadataValue *)handle NS_DESIGNATED_INITIALIZER;
+- (instancetype)init NS_UNAVAILABLE;
+
+@end
+
+typedef NS_ENUM(NSInteger, NTYTChannelIdentityCollectionState) {
+    NTYTChannelIdentityCollectionStateAvailable = 0,
+    NTYTChannelIdentityCollectionStateUnavailable,
+};
+
+@interface NTYTChannelIdentityCollection : NSObject
+
+@property(nonatomic, readonly) NTYTChannelIdentityCollectionState state;
+@property(nonatomic, copy, readonly) NSArray<NTYTChannelIdentity *> *identities;
+
++ (nullable instancetype)availableWithIdentities:(NSArray<NTYTChannelIdentity *> *)identities;
++ (instancetype)unavailableCollection;
+- (instancetype)init NS_UNAVAILABLE;
+
+@end
+
 @interface NTYTContentMetadata : NSObject
 
 @property(nonatomic, readonly) NTYTContentType contentType;
@@ -23,18 +52,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, readonly) NTYTMetadataValue *title;
 @property(nonatomic, strong, readonly) NTYTMetadataValue *postBody;
 @property(nonatomic, strong, readonly) NTYTMetadataValue *playlistID;
-@property(nonatomic, strong, readonly) NTYTMetadataValue *channelID;
-@property(nonatomic, strong, readonly) NTYTMetadataValue *channelName;
-@property(nonatomic, strong, readonly) NTYTMetadataValue *handle;
+@property(nonatomic, strong, readonly) NTYTChannelIdentityCollection *channelIdentityCollection;
 
 - (instancetype)initWithContentType:(NTYTContentType)contentType
                              videoID:(NTYTMetadataValue *)videoID
                                title:(NTYTMetadataValue *)title
                             postBody:(NTYTMetadataValue *)postBody
                           playlistID:(NTYTMetadataValue *)playlistID
-                           channelID:(NTYTMetadataValue *)channelID
-                         channelName:(NTYTMetadataValue *)channelName
-                              handle:(NTYTMetadataValue *)handle NS_DESIGNATED_INITIALIZER;
+         channelIdentityCollection:(NTYTChannelIdentityCollection *)channelIdentityCollection NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 

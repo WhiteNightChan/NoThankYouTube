@@ -37,6 +37,8 @@
                                        internalFailure:(BOOL *)internalFailure;
 + (nullable NTYTMetadataValue *)generalTargetForMetadata:(NTYTContentMetadata *)metadata
                                          internalFailure:(BOOL *)internalFailure;
++ (nullable NSArray<NTYTMetadataValue *> *)channelValuesForMetadata:(NTYTContentMetadata *)metadata
+                                                       internalFailure:(BOOL *)internalFailure;
 + (NTYTMatchResult)evaluateExpression:(NTYTMatcherExpression *)expression
                                 value:(NTYTMetadataValue *)value
                               options:(nullable NTYTMatchOptions *)options
@@ -235,13 +237,15 @@
         case NTYTTargetKindTitle:
             return [self evaluateExpression:expression value:metadata.title options:options
                             internalFailure:internalFailure];
-        case NTYTTargetKindChannel:
-            return [self evaluateAggregatedExpression:expression
-                                               values:@[metadata.channelID,
-                                                        metadata.channelName,
-                                                        metadata.handle]
-                                              options:options
-                                      internalFailure:internalFailure];
+        case NTYTTargetKindChannel: {
+            NSArray<NTYTMetadataValue *> *values =
+                [self channelValuesForMetadata:metadata internalFailure:internalFailure];
+            if (*internalFailure) {
+                return NTYTMatchResultNoMatch;
+            }
+            return [self evaluateAggregatedExpression:expression values:values
+                                              options:options internalFailure:internalFailure];
+        }
         case NTYTTargetKindVideoID:
             return [self evaluateExpression:expression value:metadata.videoID options:options
                             internalFailure:internalFailure];
@@ -254,14 +258,16 @@
         case NTYTTargetKindGlobal: {
             NTYTMetadataValue *general = [self generalTargetForMetadata:metadata
                                                          internalFailure:internalFailure];
-            if (*internalFailure || !general) {
+            NSArray<NTYTMetadataValue *> *channelValues =
+                [self channelValuesForMetadata:metadata internalFailure:internalFailure];
+            if (*internalFailure || !general || !channelValues) {
                 return NTYTMatchResultNoMatch;
             }
+            NSMutableArray<NTYTMetadataValue *> *values =
+                [NSMutableArray arrayWithObject:general];
+            [values addObjectsFromArray:channelValues];
             return [self evaluateAggregatedExpression:expression
-                                               values:@[general,
-                                                        metadata.channelID,
-                                                        metadata.channelName,
-                                                        metadata.handle]
+                                               values:values
                                               options:options
                                       internalFailure:internalFailure];
         }
@@ -297,10 +303,13 @@
                     return NTYTMatchResultNoMatch;
                 }
             }
+            NSArray<NTYTMetadataValue *> *values =
+                [self channelValuesForMetadata:metadata internalFailure:internalFailure];
+            if (*internalFailure) {
+                return NTYTMatchResultNoMatch;
+            }
             result = [self evaluateAggregatedExpression:modifier.matcherExpression
-                                                  values:@[metadata.channelID,
-                                                           metadata.channelName,
-                                                           metadata.handle]
+                                                  values:values
                                                  options:options
                                          internalFailure:internalFailure];
             break;
@@ -417,6 +426,44 @@
         case NTYTContentTypeUnresolved:
             *internalFailure = YES;
             return nil;
+    }
+    *internalFailure = YES;
+    return nil;
+}
+
++ (nullable NSArray<NTYTMetadataValue *> *)channelValuesForMetadata:(NTYTContentMetadata *)metadata
+                                             internalFailure:(BOOL *)internalFailure {
+    NTYTChannelIdentityCollection *collection = metadata.channelIdentityCollection;
+    if (!collection) {
+        *internalFailure = YES;
+        return nil;
+    }
+    switch (collection.state) {
+        case NTYTChannelIdentityCollectionStateUnavailable:
+            if (collection.identities.count != 0) {
+                *internalFailure = YES;
+                return nil;
+            }
+            return @[[NTYTMetadataValue unavailableValue]];
+
+        case NTYTChannelIdentityCollectionStateAvailable: {
+            if (collection.identities.count == 0) {
+                *internalFailure = YES;
+                return nil;
+            }
+            NSMutableArray<NTYTMetadataValue *> *values =
+                [NSMutableArray arrayWithCapacity:collection.identities.count * 3];
+            for (NTYTChannelIdentity *identity in collection.identities) {
+                if (!identity.channelID || !identity.channelName || !identity.handle) {
+                    *internalFailure = YES;
+                    return nil;
+                }
+                [values addObjectsFromArray:@[identity.channelID,
+                                               identity.channelName,
+                                               identity.handle]];
+            }
+            return values;
+        }
     }
     *internalFailure = YES;
     return nil;

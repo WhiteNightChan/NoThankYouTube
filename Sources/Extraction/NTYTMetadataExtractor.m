@@ -45,6 +45,29 @@ static NSArray<NSNumber *> *NTYTChannelProviderBPath(void) {
     return @[@1, @168777401, @5, @232954548, @18, @1];
 }
 
+static NSArray<NSNumber *> *NTYTCollaborationDiscriminatorPath(void) {
+    return @[@1, @168777401, @5, @232954548, @18, @1, @24];
+}
+
+static NSArray<NSNumber *> *NTYTCollaboratorElementsPath(void) {
+    return @[@1, @168777401, @5, @232954548, @18, @1, @24,
+             @513888437, @997, @3, @3, @169495254, @443434441,
+             @1, @1, @441573002, @4, @153515154, @172660663,
+             @1, @168777401, @5, @413471385];
+}
+
+static NSArray<NSNumber *> *NTYTCollaboratorNameParentPath(void) {
+    return @[@1, @489973921, @1];
+}
+
+static NSArray<NSNumber *> *NTYTCollaboratorIDPath(void) {
+    return @[@1, @489973921, @997, @3, @3, @169495254, @48687626];
+}
+
+static NSArray<NSNumber *> *NTYTCollaboratorHandlePath(void) {
+    return @[@1, @489973921, @1, @5, @3, @169495254, @48687626];
+}
+
 static NSArray<NSNumber *> *NTYTPlaylistTitlePath(void) {
     return @[@1, @168777401, @5, @232954548, @18, @1, @21, @8178, @1];
 }
@@ -108,6 +131,18 @@ static NTYTMetadataValue *NTYTMetadataValueForString(NSString *value) {
                  : [NTYTMetadataValue unavailableValue];
 }
 
+static NTYTChannelIdentityCollection *NTYTSingleChannelCollection(
+    NTYTMetadataValue *channelID,
+    NTYTMetadataValue *channelName,
+    NTYTMetadataValue *handle) {
+    NTYTChannelIdentity *identity =
+        [[NTYTChannelIdentity alloc] initWithChannelID:channelID
+                                          channelName:channelName
+                                               handle:handle];
+    return [NTYTChannelIdentityCollection availableWithIdentities:@[identity]]
+        ?: [NTYTChannelIdentityCollection unavailableCollection];
+}
+
 static NSString *NTYTReconcileStrings(NSString *first, NSString *second) {
     if (first && second) {
         return [first isEqualToString:second] ? first : nil;
@@ -163,8 +198,22 @@ static NSDictionary<NSNumber *, NSString *> *NTYTVideoRichFields(NSData *data,
     for (NSArray<NSNumber *> *path in NTYTRichMetadataPaths()) {
         NSArray<NSData *> *candidates =
             [NTYTProtobufReader messagesAtPath:path inData:data error:nil];
-        for (NSData *candidate in candidates ?: @[]) {
-            NSString *candidateID = NTYTDirectString(candidate, 1, YES);
+        if (!candidates) {
+            return @{};
+        }
+        for (NSData *candidate in candidates) {
+            NSArray<NSString *> *candidateIDStrings =
+                [NTYTProtobufReader UTF8StringsForDirectField:1
+                                                    inMessage:candidate
+                                                         error:nil];
+            if (!candidateIDStrings) {
+                return @{};
+            }
+            if (candidateIDStrings.count >= 2) {
+                return @{};
+            }
+
+            NSString *candidateID = NTYTExactlyOneString(candidateIDStrings, YES);
             if ([candidateID isEqualToString:videoID]) {
                 [matchingCandidates addObject:candidate];
             }
@@ -209,15 +258,83 @@ static NSDictionary<NSNumber *, NSString *> *NTYTChannelProviderAFields(NSData *
     return fields;
 }
 
-static NTYTContentMetadata *NTYTVideoMetadata(NSData *data) {
-    NSString *videoID = NTYTResolvedVideoID(data);
-    NSDictionary<NSNumber *, NSString *> *rich = NTYTVideoRichFields(data, videoID);
+static NSString *NTYTCollaboratorHandle(NSData *element, NSString *channelID) {
+    NSArray<NSData *> *messages =
+        [NTYTProtobufReader messagesAtPath:NTYTCollaboratorHandlePath()
+                                    inData:element
+                                     error:nil];
+    if (messages.count != 1) {
+        return nil;
+    }
+
+    NSData *message = messages.firstObject;
+    NSString *providerID = NTYTDirectString(message, 2, YES);
+    NSString *source = NTYTDirectString(message, 4, YES);
+    if (!providerID || (channelID && ![providerID isEqualToString:channelID]) ||
+        ![source hasPrefix:@"/@"] || source.length <= 2) {
+        return nil;
+    }
+    return NTYTSemanticHandleFromSourceString(source);
+}
+
+static NTYTChannelIdentityCollection *NTYTCollaboratorCollection(NSData *data) {
+    NSArray<NSData *> *elements =
+        [NTYTProtobufReader messagesAtPath:NTYTCollaboratorElementsPath()
+                                    inData:data
+                                     error:nil];
+    if (!elements || elements.count == 0) {
+        return [NTYTChannelIdentityCollection unavailableCollection];
+    }
+
+    NSMutableArray<NTYTChannelIdentity *> *identities =
+        [NSMutableArray arrayWithCapacity:elements.count];
+    for (NSData *element in elements) {
+        NSString *channelName = NTYTExactlyOneMessageString(element,
+                                                             NTYTCollaboratorNameParentPath(),
+                                                             1, NO);
+        NSString *channelID = NTYTExactlyOneMessageString(element,
+                                                           NTYTCollaboratorIDPath(),
+                                                           2, YES);
+        NSString *handle = NTYTCollaboratorHandle(element, channelID);
+        [identities addObject:[[NTYTChannelIdentity alloc]
+            initWithChannelID:NTYTMetadataValueForString(channelID)
+                  channelName:NTYTMetadataValueForString(channelName)
+                       handle:NTYTMetadataValueForString(handle)]];
+    }
+    return [NTYTChannelIdentityCollection availableWithIdentities:identities]
+        ?: [NTYTChannelIdentityCollection unavailableCollection];
+}
+
+static NTYTChannelIdentityCollection *NTYTVideoChannelCollection(
+    NSData *data,
+    NSDictionary<NSNumber *, NSString *> *rich) {
+    // Only a qualified Video reaches this discriminator. A failed traversal
+    // cannot safely authorize the ordinary single-creator providers.
+    NSArray<NSData *> *branches =
+        [NTYTProtobufReader messagesAtPath:NTYTCollaborationDiscriminatorPath()
+                                    inData:data
+                                     error:nil];
+    if (!branches) {
+        return [NTYTChannelIdentityCollection unavailableCollection];
+    }
+    if (branches.count > 0) {
+        return NTYTCollaboratorCollection(data);
+    }
+
     NSDictionary<NSNumber *, NSString *> *channelA = NTYTChannelProviderAFields(data);
     NSString *channelB = NTYTExactlyOneMessageString(data,
                                                       NTYTChannelProviderBPath(),
-                                                      9,
-                                                      YES);
+                                                      9, YES);
     NSString *channelID = NTYTReconcileStrings(channelA[@2], channelB);
+    return NTYTSingleChannelCollection(NTYTMetadataValueForString(channelID),
+                                       NTYTMetadataValueForString(rich[@37]),
+                                       NTYTMetadataValueForString(channelA[@4]));
+}
+
+static NTYTContentMetadata *NTYTVideoMetadata(NSData *data) {
+    NSString *videoID = NTYTResolvedVideoID(data);
+    NSDictionary<NSNumber *, NSString *> *rich = NTYTVideoRichFields(data, videoID);
+    NTYTChannelIdentityCollection *channels = NTYTVideoChannelCollection(data, rich);
 
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypeVideo
@@ -225,9 +342,7 @@ static NTYTContentMetadata *NTYTVideoMetadata(NSData *data) {
                       title:NTYTMetadataValueForString(rich[@36])
                    postBody:[NTYTMetadataValue unavailableValue]
                  playlistID:[NTYTMetadataValue unavailableValue]
-                  channelID:NTYTMetadataValueForString(channelID)
-                channelName:NTYTMetadataValueForString(rich[@37])
-                     handle:NTYTMetadataValueForString(channelA[@4])];
+         channelIdentityCollection:channels];
 }
 
 static NSArray<NSNumber *> *NTYTPostPath(NSNumber *root,
@@ -248,7 +363,10 @@ static NSString *NTYTPostField(NSData *data,
             [NTYTProtobufReader messagesAtPath:NTYTPostPath(root, suffix)
                                         inData:data
                                          error:nil];
-        [messages addObjectsFromArray:candidates ?: @[]];
+        if (!candidates) {
+            return nil;
+        }
+        [messages addObjectsFromArray:candidates];
     }
     if (messages.count != 1) {
         return nil;
@@ -263,6 +381,11 @@ static NTYTContentMetadata *NTYTPostMetadata(NSData *data) {
     NSString *channelID = NTYTPostField(data, channelSuffix, 2, YES);
     NSString *sourceHandle = NTYTPostField(data, channelSuffix, 4, YES);
     NSString *postBody = NTYTPostField(data, @[@1, @1, @4, @1], 1, NO);
+    NTYTChannelIdentityCollection *channels = NTYTSingleChannelCollection(
+        NTYTMetadataValueForString(channelID),
+        NTYTMetadataValueForString(channelName),
+        NTYTMetadataValueForString(
+            sourceHandle ? NTYTSemanticHandleFromSourceString(sourceHandle) : nil));
 
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypePost
@@ -270,10 +393,7 @@ static NTYTContentMetadata *NTYTPostMetadata(NSData *data) {
                       title:[NTYTMetadataValue unavailableValue]
                    postBody:NTYTMetadataValueForString(postBody)
                  playlistID:[NTYTMetadataValue unavailableValue]
-                  channelID:NTYTMetadataValueForString(channelID)
-                channelName:NTYTMetadataValueForString(channelName)
-                     handle:NTYTMetadataValueForString(
-                         sourceHandle ? NTYTSemanticHandleFromSourceString(sourceHandle) : nil)];
+         channelIdentityCollection:channels];
 }
 
 static NSString *NTYTPlaylistID(NSData *data) {
@@ -288,7 +408,7 @@ static NSString *NTYTPlaylistID(NSData *data) {
                                                 inMessage:message
                                                      error:nil];
         if (!values) {
-            continue;
+            return nil;
         }
         for (NSString *value in values) {
             if (value.length > 0) {
@@ -311,15 +431,21 @@ static NTYTContentMetadata *NTYTPlaylistMetadata(NSData *data,
         channelFields = NTYTChannelProviderAFields(data);
     }
 
+    NTYTChannelIdentityCollection *channels =
+        contentType == NTYTContentTypePlaylistMix
+            ? [NTYTChannelIdentityCollection unavailableCollection]
+            : NTYTSingleChannelCollection(
+                NTYTMetadataValueForString(channelFields[@2]),
+                [NTYTMetadataValue unavailableValue],
+                NTYTMetadataValueForString(channelFields[@4]));
+
     return [[NTYTContentMetadata alloc]
         initWithContentType:contentType
                     videoID:[NTYTMetadataValue unavailableValue]
                       title:NTYTMetadataValueForString(title)
                    postBody:[NTYTMetadataValue unavailableValue]
                  playlistID:NTYTMetadataValueForString(playlistID)
-                  channelID:NTYTMetadataValueForString(channelFields[@2])
-                channelName:[NTYTMetadataValue unavailableValue]
-                     handle:NTYTMetadataValueForString(channelFields[@4])];
+         channelIdentityCollection:channels];
 }
 
 @interface NTYTMetadataExtractionResult ()
