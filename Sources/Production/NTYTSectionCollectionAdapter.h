@@ -2,7 +2,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface NTYTItemSectionAdapter : NSObject
+@interface NTYTSectionCollectionAdapter : NSObject
 
 + (NSArray *)filteredSectionCollectionFromOriginal:(NSArray *)originalCollection;
 

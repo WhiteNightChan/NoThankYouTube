@@ -2,9 +2,7 @@
 
 #import <YouTubeHeader/YTInnerTubeCollectionViewController.h>
 
-#import "NTYTItemSectionAdapter.h"
-#import "NTYTVerticalListAdapter.h"
-#import "NTYTYouTubePrivateInterfaces.h"
+#import "NTYTSectionCollectionAdapter.h"
 #import "Persistence/NTYTSettingsCoordinator.h"
 #import "Debug/LogHelper.h"
 
@@ -16,8 +14,8 @@
         if ([originalValue isKindOfClass:[NSArray class]]) {
             NSArray *original = (NSArray *)originalValue;
             NSArray *filtered =
-                [NTYTItemSectionAdapter filteredSectionCollectionFromOriginal:original];
-            NTYTLog(@"[Hook] displaySections: input=%lu output=%lu changed=%@",
+                [NTYTSectionCollectionAdapter filteredSectionCollectionFromOriginal:original];
+            NTYTLog(@"[Hook] displaySections: input=%lu output=%lu outerChanged=%@",
                     (unsigned long)original.count,
                     (unsigned long)filtered.count,
                     filtered != original ? @"YES" : @"NO");
@@ -33,38 +31,14 @@
 
 - (void)addSectionsFromArray:(NSArray *)array {
     NSArray *filtered =
-        [NTYTItemSectionAdapter filteredSectionCollectionFromOriginal:array];
+        [NTYTSectionCollectionAdapter filteredSectionCollectionFromOriginal:array];
 
-    NTYTLog(@"[Hook] addSectionsFromArray: input=%lu output=%lu changed=%@",
+    NTYTLog(@"[Hook] addSectionsFromArray: input=%lu output=%lu outerChanged=%@",
             (unsigned long)array.count,
             (unsigned long)filtered.count,
             filtered != array ? @"YES" : @"NO");
 
     %orig(filtered);
-}
-
-%end
-
-%hook YTIVerticalListRenderer
-
-- (id)itemsArray {
-    id originalValue = %orig;
-
-    if (![originalValue isKindOfClass:[NSArray class]]) {
-        return originalValue;
-    }
-
-    NSArray *original = (NSArray *)originalValue;
-    NSArray *filtered =
-        [NTYTVerticalListAdapter filteredItemsFromOriginal:original];
-
-    if (filtered != original) {
-        NTYTLog(@"[Hook] verticalList.itemsArray: input=%lu output=%lu changed=YES",
-                (unsigned long)original.count,
-                (unsigned long)filtered.count);
-    }
-
-    return filtered;
 }
 
 %end
