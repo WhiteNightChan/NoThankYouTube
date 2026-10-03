@@ -441,6 +441,7 @@
         return NTYTMatchResultNoMatch;
     }
 
+    BOOL sawNoMatch = NO;
     BOOL sawUnavailable = NO;
     NTYTMatchResult aggregate = NTYTMatchResultNoMatch;
     for (NTYTMetadataValue *value in values) {
@@ -455,12 +456,16 @@
             aggregate = NTYTMatchResultMatch;
             break;
         }
-        if (fieldResult == NTYTMatchResultUnavailable) {
+        if (fieldResult == NTYTMatchResultNoMatch) {
+            sawNoMatch = YES;
+        } else if (fieldResult == NTYTMatchResultUnavailable) {
             sawUnavailable = YES;
         }
     }
-    if (aggregate != NTYTMatchResultMatch && sawUnavailable) {
-        aggregate = NTYTMatchResultUnavailable;
+    if (aggregate != NTYTMatchResultMatch) {
+        aggregate = sawNoMatch
+            ? NTYTMatchResultNoMatch
+            : (sawUnavailable ? NTYTMatchResultUnavailable : NTYTMatchResultNoMatch);
     }
     return expression.isNegative ? NTYTNegateMatchResult(aggregate) : aggregate;
 }

@@ -9,10 +9,16 @@
 
 NSErrorDomain const NTYTSettingsStoreErrorDomain = @"com.whitenightchan.nothankyoutube.persistence";
 
-static NSError *NTYTStoreError(NSInteger code, NSString *message) {
+static NSError *NTYTStoreError(NTYTSettingsStoreErrorCode code,
+                               NSString *message,
+                               NSError *underlyingError) {
+    NSMutableDictionary *details = [@{NSLocalizedDescriptionKey: message} mutableCopy];
+    if (underlyingError) {
+        details[NSUnderlyingErrorKey] = underlyingError;
+    }
     return [NSError errorWithDomain:NTYTSettingsStoreErrorDomain
                                code:code
-                           userInfo:@{NSLocalizedDescriptionKey: message}];
+                           userInfo:details];
 }
 
 static BOOL NTYTIsPropertyListBoolean(id value) {
@@ -112,7 +118,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         return [[NTYTSettingsLoadResult alloc]
             initWithLifecycleState:NTYTSettingsLifecycleStateUnusable
                        rawSettings:nil
-                             error:readError ?: NTYTStoreError(1, @"The settings file could not be read.")];
+                             error:NTYTStoreError(NTYTSettingsStoreErrorRead,
+                                                  @"The settings file could not be read.", readError)];
     }
 
     NSError *plistError = nil;
@@ -124,7 +131,9 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         return [[NTYTSettingsLoadResult alloc]
             initWithLifecycleState:NTYTSettingsLifecycleStateUnusable
                        rawSettings:nil
-                             error:plistError ?: NTYTStoreError(2, @"The settings root is not a dictionary.")];
+                             error:NTYTStoreError(NTYTSettingsStoreErrorInvalidPropertyList,
+                                                  @"The settings file is not a property list dictionary.",
+                                                  plistError)];
     }
 
     NSDictionary *root = (NSDictionary *)propertyList;
@@ -133,7 +142,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         return [[NTYTSettingsLoadResult alloc]
             initWithLifecycleState:NTYTSettingsLifecycleStateUnusable
                        rawSettings:nil
-                             error:NTYTStoreError(3, @"The settings version is missing, invalid, or unsupported.")];
+                             error:NTYTStoreError(NTYTSettingsStoreErrorUnsupportedVersion,
+                                                  @"The settings version is missing, invalid, or unsupported.", nil)];
     }
 
     __block BOOL degraded = NO;
@@ -347,7 +357,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
                                                                error:&serializationError];
     if (!data) {
         if (error) {
-            *error = serializationError ?: NTYTStoreError(4, @"The settings could not be serialized.");
+            *error = NTYTStoreError(NTYTSettingsStoreErrorSerialization,
+                                    @"The settings could not be serialized.", serializationError);
         }
         return NO;
     }
@@ -359,7 +370,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
                                                  attributes:nil
                                                       error:&directoryError]) {
         if (error) {
-            *error = directoryError;
+            *error = NTYTStoreError(NTYTSettingsStoreErrorWrite,
+                                    @"The settings directory could not be created.", directoryError);
         }
         return NO;
     }
@@ -369,7 +381,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
                            options:NSDataWritingAtomic
                              error:&writeError];
     if (!wrote && error) {
-        *error = writeError ?: NTYTStoreError(5, @"The settings could not be written.");
+        *error = NTYTStoreError(NTYTSettingsStoreErrorWrite,
+                                @"The settings could not be written.", writeError);
     }
     return wrote;
 }

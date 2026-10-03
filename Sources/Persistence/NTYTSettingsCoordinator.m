@@ -6,6 +6,7 @@
 #import "DSL/NTYTDSLParser.h"
 #import "Debug/LogHelper.h"
 #import "NTYTSettingsStore.h"
+#import "NTYTSettingsTransferModels.h"
 #import "NTYTSnapshotAssembler.h"
 #import "NTYTStoredSettings.h"
 
@@ -17,6 +18,31 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                         noChange:(BOOL)noChange
                        errorCode:(NTYTMutationErrorCode)errorCode
                          message:(NSString *)message;
+
+@end
+
+@interface NTYTImportCommitResult ()
+- (instancetype)initWithStatus:(NTYTImportCommitStatus)status
+                         token:(nullable NSUUID *)token
+                     lifecycle:(NTYTSettingsLifecycleState)lifecycle
+                         error:(nullable NSError *)error;
+@end
+
+@implementation NTYTImportCommitResult
+
+- (instancetype)initWithStatus:(NTYTImportCommitStatus)status
+                         token:(NSUUID *)token
+                     lifecycle:(NTYTSettingsLifecycleState)lifecycle
+                         error:(NSError *)error {
+    self = [super init];
+    if (self) {
+        _status = status;
+        _confirmationToken = token;
+        _destinationLifecycle = lifecycle;
+        _error = error;
+    }
+    return self;
+}
 
 @end
 
@@ -65,12 +91,18 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 @property(nonatomic) dispatch_queue_t settingsQueue;
 @property(nonatomic) NTYTSettingsLifecycleState internalLifecycleState;
 @property(nonatomic, strong) NTYTStoredSettings *committedSettings;
+@property(nonatomic, strong) NSUUID *destinationStateToken;
 
 - (instancetype)initPrivate;
 - (void)loadInitialStateOnQueue;
 - (void)performSynchronous:(dispatch_block_t)block;
 - (BOOL)mutationsAllowedOnQueue;
 - (NTYTMutationResult *)commitCandidateSettingsOnQueue:(NTYTStoredSettings *)candidate;
+- (BOOL)commitPreparedSettingsOnQueue:(NTYTStoredSettings *)settings
+                              snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot
+                                 error:(NSError * _Nullable * _Nullable)error;
+- (BOOL)settings:(NTYTStoredSettings *)first
+  semanticallyEqualTo:(NTYTStoredSettings *)second;
 - (NTYTStoredSettings *)settingsByReplacingList:(NTYTStoredList *)list
                                           listID:(NTYTListID)listID;
 - (NTYTStoredSettings *)settingsByReplacingHideMix:(BOOL)hideMix;
@@ -105,6 +137,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                                     NULL);
         _committedSettings = [NTYTStoredSettings emptySettings];
         _internalLifecycleState = NTYTSettingsLifecycleStateUnusable;
+        _destinationStateToken = [NSUUID UUID];
         [self performSynchronous:^{
             [self loadInitialStateOnQueue];
         }];
@@ -495,17 +528,13 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     }
 
     NSError *commitError = nil;
-    if (![self.store commitSettings:candidate error:&commitError]) {
+    if (![self commitPreparedSettingsOnQueue:candidate snapshot:candidateSnapshot error:&commitError]) {
         NTYTLog(@"[Settings] disk commit failed: %@",
                 commitError.localizedDescription ?: @"<unknown>");
 
         return [NTYTMutationResult failureWithCode:NTYTMutationErrorPersistence
                                            message:commitError.localizedDescription ?: @"The settings could not be saved."];
     }
-
-    self.committedSettings = candidate;
-    self.internalLifecycleState = NTYTSettingsLifecycleStateSupportedValid;
-    [[NTYTSnapshotHolder sharedHolder] publishSnapshot:candidateSnapshot];
 
     NTYTLog(@"[Settings] mutation committed and snapshot published");
 
@@ -519,6 +548,104 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     lists[@(listID)] = list;
     return [[NTYTStoredSettings alloc] initWithLists:lists
                                             hideMix:self.committedSettings.hideMix];
+}
+
+- (BOOL)commitPreparedSettingsOnQueue:(NTYTStoredSettings *)settings
+                              snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot
+                                 error:(NSError **)error {
+    // Called under settingsQueue; disk failure leaves all authoritative in-memory state intact.
+    if (![self.store commitSettings:settings error:error]) {
+        return NO;
+    }
+    self.committedSettings = settings;
+    self.internalLifecycleState = NTYTSettingsLifecycleStateSupportedValid;
+    self.destinationStateToken = [NSUUID UUID];
+    [[NTYTSnapshotHolder sharedHolder] publishSnapshot:snapshot];
+    return YES;
+}
+
+- (BOOL)settings:(NTYTStoredSettings *)first
+  semanticallyEqualTo:(NTYTStoredSettings *)second {
+    if (first.hideMix != second.hideMix) {
+        return NO;
+    }
+    for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
+        NTYTStoredList *a = [first listForID:definition.listID];
+        NTYTStoredList *b = [second listForID:definition.listID];
+        if (![a.optionOverrides isEqualToDictionary:b.optionOverrides] ||
+            a.rules.count != b.rules.count) {
+            return NO;
+        }
+        for (NSUInteger index = 0; index < a.rules.count; index++) {
+            NTYTStoredRule *left = a.rules[index];
+            NTYTStoredRule *right = b.rules[index];
+            if (![left.identifier isEqual:right.identifier] ||
+                ![left.expression isEqualToString:right.expression]) {
+                return NO;
+            }
+        }
+    }
+    return YES;
+}
+
+- (NTYTImportCommitResult *)commitPreparedImport:(NTYTPreparedImport *)prepared
+                                confirmationToken:(NSUUID *)token {
+    __block NTYTImportCommitResult *result;
+    [self performSynchronous:^{
+        NTYTSettingsLifecycleState state = self.internalLifecycleState;
+        if (!prepared.settings || !prepared.snapshot) {
+            NSError *error = [NSError errorWithDomain:NTYTSettingsStoreErrorDomain
+                                                code:NTYTSettingsStoreErrorSerialization
+                                            userInfo:nil];
+            result = [[NTYTImportCommitResult alloc] initWithStatus:NTYTImportCommitStatusFailure
+                                                               token:nil lifecycle:state error:error];
+            return;
+        }
+
+        if (state != NTYTSettingsLifecycleStateAbsent &&
+            ![token isEqual:self.destinationStateToken]) {
+            result = [[NTYTImportCommitResult alloc]
+                initWithStatus:NTYTImportCommitStatusConfirmationRequired
+                         token:self.destinationStateToken lifecycle:state error:nil];
+            return;
+        }
+
+        // No-op is assessed only after the latest destination is authorized.
+        if (state == NTYTSettingsLifecycleStateSupportedValid &&
+            [self settings:prepared.settings semanticallyEqualTo:self.committedSettings]) {
+            result = [[NTYTImportCommitResult alloc] initWithStatus:NTYTImportCommitStatusNoChange
+                                                               token:nil lifecycle:state error:nil];
+            return;
+        }
+
+        NSError *commitError = nil;
+        if (![self commitPreparedSettingsOnQueue:prepared.settings
+                                         snapshot:prepared.snapshot
+                                            error:&commitError]) {
+            NTYTLog(@"[Settings] import disk commit failed: %@",
+                    commitError.localizedDescription ?: @"<unknown>");
+            result = [[NTYTImportCommitResult alloc] initWithStatus:NTYTImportCommitStatusFailure
+                                                               token:nil lifecycle:state error:commitError];
+            return;
+        }
+        result = [[NTYTImportCommitResult alloc] initWithStatus:NTYTImportCommitStatusSuccess
+                                                           token:nil
+                                                       lifecycle:self.internalLifecycleState
+                                                           error:nil];
+    }];
+    return result;
+}
+
+- (NTYTExportCapture *)captureSettingsForExport {
+    __block NTYTExportCapture *capture;
+    [self performSynchronous:^{
+        if (self.internalLifecycleState == NTYTSettingsLifecycleStateUnusable) {
+            return;
+        }
+        capture = [[NTYTExportCapture alloc]
+            initWithSettings:self.committedSettings sourceLifecycle:self.internalLifecycleState];
+    }];
+    return capture;
 }
 
 - (NTYTStoredSettings *)settingsByReplacingHideMix:(BOOL)hideMix {

@@ -9,6 +9,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 FOUNDATION_EXPORT NSErrorDomain const NTYTSettingsStoreErrorDomain;
 
+typedef NS_ENUM(NSInteger, NTYTSettingsStoreErrorCode) {
+    NTYTSettingsStoreErrorRead = 1,
+    NTYTSettingsStoreErrorInvalidPropertyList = 2,
+    NTYTSettingsStoreErrorUnsupportedVersion = 3,
+    NTYTSettingsStoreErrorSerialization = 4,
+    NTYTSettingsStoreErrorWrite = 5,
+};
+
 @interface NTYTSettingsLoadResult : NSObject
 
 @property(nonatomic, readonly) NTYTSettingsLifecycleState lifecycleState;
