@@ -1,10 +1,14 @@
 #import <Foundation/Foundation.h>
 
+@class NTYTRuntimeSettingsSnapshot;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface NTYTProductionFilter : NSObject
 
-+ (NSArray *)filteredSectionCollectionFromOriginal:(NSArray *)originalCollection;
++ (BOOL)shouldRemoveContentEntry:(id)entry
+                        snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot
+                      childIndex:(NSUInteger)childIndex;
 
 @end
 
