@@ -10,6 +10,12 @@ typedef NS_ENUM(NSInteger, NTYTContentType) {
     NTYTContentTypePlaylistMix,
 };
 
+typedef NS_ENUM(NSInteger, NTYTShortsClassification) {
+    NTYTShortsClassificationUnavailable = 0,
+    NTYTShortsClassificationShorts,
+    NTYTShortsClassificationNonShorts,
+};
+
 typedef NS_ENUM(NSInteger, NTYTMetadataValueState) {
     NTYTMetadataValueStateAvailable = 0,
     NTYTMetadataValueStateAbsent,
@@ -76,6 +82,7 @@ typedef NS_ENUM(NSInteger, NTYTModifierKind) {
     NTYTModifierKindVideo = 2,
     NTYTModifierKindPost = 3,
     NTYTModifierKindPlaylist = 4,
+    NTYTModifierKindShorts = 5,
 };
 
 typedef NS_ENUM(NSInteger, NTYTSettingsLifecycleState) {

@@ -360,6 +360,27 @@
             }
             break;
 
+        case NTYTModifierKindShorts:
+            if (modifier.matcherExpression) {
+                *internalFailure = YES;
+                return NTYTMatchResultNoMatch;
+            }
+            switch (metadata.shortsClassification) {
+                case NTYTShortsClassificationShorts:
+                    result = NTYTMatchResultMatch;
+                    break;
+                case NTYTShortsClassificationNonShorts:
+                    result = NTYTMatchResultNoMatch;
+                    break;
+                case NTYTShortsClassificationUnavailable:
+                    result = NTYTMatchResultUnavailable;
+                    break;
+                default:
+                    *internalFailure = YES;
+                    return NTYTMatchResultNoMatch;
+            }
+            break;
+
         default:
             *internalFailure = YES;
             return NTYTMatchResultNoMatch;
@@ -398,6 +419,7 @@
         case NTYTModifierKindVideo:
         case NTYTModifierKindPost:
         case NTYTModifierKindPlaylist:
+        case NTYTModifierKindShorts:
             *internalFailure = YES;
             return nil;
 

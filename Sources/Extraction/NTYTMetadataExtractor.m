@@ -17,6 +17,10 @@ static NSError *NTYTExtractionError(NSInteger code, NSString *message) {
                            userInfo:@{NSLocalizedDescriptionKey: message}];
 }
 
+static NSArray<NSNumber *> *NTYTShortsStatePath(void) {
+    return @[@1, @168777401, @5, @232954548, @18, @1, @1];
+}
+
 static NSArray<NSNumber *> *NTYTVideoIDProviderAPath(void) {
     return @[@1, @168777401, @5, @232954548, @18, @5, @169495254,
              @98150882, @1, @66439850, @1, @66441155, @3, @73080600];
@@ -34,6 +38,16 @@ static NSArray<NSArray<NSNumber *> *> *NTYTRichMetadataPaths(void) {
         @[@1, @168777401, @5, @232954548, @18, @4, @169495254,
           @462702848, @1, @48687757],
     ];
+}
+
+static NSArray<NSNumber *> *NTYTShortsRichProvider1Path(void) {
+    return @[@1, @168777401, @5, @232954548, @18, @4, @169495254,
+             @462702848];
+}
+
+static NSArray<NSNumber *> *NTYTShortsRichProvider2Path(void) {
+    return @[@1, @168777401, @5, @232954548, @18, @1, @19, @1, @1,
+             @4, @424915055, @1, @3, @48687757];
 }
 
 static NSArray<NSNumber *> *NTYTChannelProviderAPath(void) {
@@ -236,6 +250,38 @@ static NSDictionary<NSNumber *, NSString *> *NTYTVideoRichFields(NSData *data,
     return fields;
 }
 
+static NSDictionary<NSNumber *, NSString *> *NTYTShortsVideoRichFields(NSData *data) {
+    NSString *title1 = NTYTExactlyOneMessageString(data,
+                                                   NTYTShortsRichProvider1Path(),
+                                                   4,
+                                                   NO);
+    NSString *title2 = NTYTExactlyOneMessageString(data,
+                                                   NTYTShortsRichProvider2Path(),
+                                                   36,
+                                                   NO);
+    NSString *channelName1 = NTYTExactlyOneMessageString(data,
+                                                         NTYTShortsRichProvider1Path(),
+                                                         5,
+                                                         NO);
+    NSString *channelName2 = NTYTExactlyOneMessageString(data,
+                                                         NTYTShortsRichProvider2Path(),
+                                                         37,
+                                                         NO);
+
+    NSString *title = NTYTReconcileStrings(title1, title2);
+    NSString *channelName = NTYTReconcileStrings(channelName1, channelName2);
+
+    NSMutableDictionary<NSNumber *, NSString *> *fields =
+        [NSMutableDictionary dictionary];
+    if (title) {
+        fields[@36] = title;
+    }
+    if (channelName) {
+        fields[@37] = channelName;
+    }
+    return fields;
+}
+
 static NSDictionary<NSNumber *, NSString *> *NTYTChannelProviderAFields(NSData *data) {
     NSArray<NSData *> *messages =
         [NTYTProtobufReader messagesAtPath:NTYTChannelProviderAPath()
@@ -331,13 +377,51 @@ static NTYTChannelIdentityCollection *NTYTVideoChannelCollection(
                                        NTYTMetadataValueForString(channelA[@4]));
 }
 
+static NTYTShortsClassification NTYTVideoShortsClassification(NSData *data) {
+    @try {
+        NSArray<NSData *> *messages =
+            [NTYTProtobufReader messagesAtPath:NTYTShortsStatePath()
+                                        inData:data
+                                         error:nil];
+        if (!messages) {
+            return NTYTShortsClassificationUnavailable;
+        }
+
+        BOOL foundShortsMarker = NO;
+        for (NSData *message in messages) {
+            NSArray<NSNumber *> *field25Values =
+                [NTYTProtobufReader varintValuesForField:25 inData:message error:nil];
+            NSArray<NSNumber *> *field26Values =
+                [NTYTProtobufReader varintValuesForField:26 inData:message error:nil];
+            if (!field25Values || !field26Values) {
+                return NTYTShortsClassificationUnavailable;
+            }
+            // Repeated values are allowed; both markers must be in this message.
+            if ([field25Values containsObject:@3] &&
+                [field26Values containsObject:@452984831]) {
+                foundShortsMarker = YES;
+            }
+        }
+        return foundShortsMarker ? NTYTShortsClassificationShorts
+                                 : NTYTShortsClassificationNonShorts;
+    } @catch (__unused NSException *exception) {
+        // A classifier failure does not discard independently readable metadata.
+        return NTYTShortsClassificationUnavailable;
+    }
+}
+
 static NTYTContentMetadata *NTYTVideoMetadata(NSData *data) {
+    NTYTShortsClassification shortsClassification = NTYTVideoShortsClassification(data);
     NSString *videoID = NTYTResolvedVideoID(data);
-    NSDictionary<NSNumber *, NSString *> *rich = NTYTVideoRichFields(data, videoID);
+    NSDictionary<NSNumber *, NSString *> *rich =
+        shortsClassification == NTYTShortsClassificationShorts
+            ? NTYTShortsVideoRichFields(data)
+            : NTYTVideoRichFields(data, videoID);
     NTYTChannelIdentityCollection *channels = NTYTVideoChannelCollection(data, rich);
 
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypeVideo
+       shortsClassification:shortsClassification
                     videoID:NTYTMetadataValueForString(videoID)
                       title:NTYTMetadataValueForString(rich[@36])
                    postBody:[NTYTMetadataValue unavailableValue]
@@ -389,6 +473,7 @@ static NTYTContentMetadata *NTYTPostMetadata(NSData *data) {
 
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypePost
+       shortsClassification:NTYTShortsClassificationNonShorts
                     videoID:[NTYTMetadataValue unavailableValue]
                       title:[NTYTMetadataValue unavailableValue]
                    postBody:NTYTMetadataValueForString(postBody)
@@ -441,6 +526,7 @@ static NTYTContentMetadata *NTYTPlaylistMetadata(NSData *data,
 
     return [[NTYTContentMetadata alloc]
         initWithContentType:contentType
+       shortsClassification:NTYTShortsClassificationNonShorts
                     videoID:[NTYTMetadataValue unavailableValue]
                       title:NTYTMetadataValueForString(title)
                    postBody:[NTYTMetadataValue unavailableValue]

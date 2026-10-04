@@ -48,6 +48,7 @@ typedef NS_ENUM(NSInteger, NTYTChannelIdentityCollectionState) {
 @interface NTYTContentMetadata : NSObject
 
 @property(nonatomic, readonly) NTYTContentType contentType;
+@property(nonatomic, readonly) NTYTShortsClassification shortsClassification;
 @property(nonatomic, strong, readonly) NTYTMetadataValue *videoID;
 @property(nonatomic, strong, readonly) NTYTMetadataValue *title;
 @property(nonatomic, strong, readonly) NTYTMetadataValue *postBody;
@@ -55,6 +56,7 @@ typedef NS_ENUM(NSInteger, NTYTChannelIdentityCollectionState) {
 @property(nonatomic, strong, readonly) NTYTChannelIdentityCollection *channelIdentityCollection;
 
 - (instancetype)initWithContentType:(NTYTContentType)contentType
+               shortsClassification:(NTYTShortsClassification)shortsClassification
                              videoID:(NTYTMetadataValue *)videoID
                                title:(NTYTMetadataValue *)title
                             postBody:(NTYTMetadataValue *)postBody

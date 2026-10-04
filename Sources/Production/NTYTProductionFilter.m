@@ -91,9 +91,10 @@ static NSString *NTYTChannelCollectionLogValue(NTYTChannelIdentityCollection *co
         NTYTDecision decision =
             [NTYTEvaluator decisionForMetadata:metadata snapshot:snapshot];
 
-        NTYTLog(@"[Filter] child=%lu type=%ld videoID=%@ title=%@ postBody=%@ playlistID=%@ channels=[%@] decision=%ld",
+        NTYTLog(@"[Filter] child=%lu type=%ld shortsClassification=%ld videoID=%@ title=%@ postBody=%@ playlistID=%@ channels=[%@] decision=%ld",
                 (unsigned long)childIndex,
                 (long)metadata.contentType,
+                (long)metadata.shortsClassification,
                 NTYTMetadataLogValue(metadata.videoID),
                 NTYTMetadataLogValue(metadata.title),
                 NTYTMetadataLogValue(metadata.postBody),

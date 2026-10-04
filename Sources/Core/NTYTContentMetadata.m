@@ -116,6 +116,7 @@
 @implementation NTYTContentMetadata
 
 - (instancetype)initWithContentType:(NTYTContentType)contentType
+               shortsClassification:(NTYTShortsClassification)shortsClassification
                              videoID:(NTYTMetadataValue *)videoID
                                title:(NTYTMetadataValue *)title
                             postBody:(NTYTMetadataValue *)postBody
@@ -124,9 +125,13 @@
     self = [super init];
     if (self) {
         NSParameterAssert(contentType != NTYTContentTypeUnresolved);
+        NSParameterAssert(shortsClassification == NTYTShortsClassificationShorts ||
+                          shortsClassification == NTYTShortsClassificationNonShorts ||
+                          shortsClassification == NTYTShortsClassificationUnavailable);
         NSParameterAssert(videoID && title && postBody && playlistID &&
                           channelIdentityCollection);
         _contentType = contentType;
+        _shortsClassification = shortsClassification;
         _videoID = videoID;
         _title = title;
         _postBody = postBody;

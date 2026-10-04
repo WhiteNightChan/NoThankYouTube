@@ -217,7 +217,8 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     BOOL isVideo = [name isEqualToString:@"video"];
     BOOL isPost = [name isEqualToString:@"post"];
     BOOL isPlaylist = [name isEqualToString:@"playlist"];
-    if (!isChannel && !isContent && !isVideo && !isPost && !isPlaylist) {
+    BOOL isShorts = [name isEqualToString:@"shorts"];
+    if (!isChannel && !isContent && !isVideo && !isPost && !isPlaylist && !isShorts) {
         if (error) {
             *error = NTYTDSLErrorWithDetail(NTYTDSLErrorUnknownModifier, NTYTDSLErrorReasonUnknownModifier,
                                            [NSString stringWithFormat:@"Unknown modifier: %@", name],
@@ -226,7 +227,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         return nil;
     }
 
-    if (isVideo || isPost || isPlaylist) {
+    if (isVideo || isPost || isPlaylist || isShorts) {
         if (cursor >= expression.length || [expression characterAtIndex:cursor] != '}') {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorUnexpectedModifierValue,
@@ -240,7 +241,8 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         }
         NTYTModifierKind kind = isVideo
             ? NTYTModifierKindVideo
-            : (isPost ? NTYTModifierKindPost : NTYTModifierKindPlaylist);
+            : (isPost ? NTYTModifierKindPost
+                      : (isPlaylist ? NTYTModifierKindPlaylist : NTYTModifierKindShorts));
         return [NTYTModifier predicateModifierWithKind:kind
                                               negative:modifierNegative];
     }
