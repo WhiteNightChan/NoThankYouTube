@@ -72,7 +72,7 @@
     return NO;
 }
 
-+ (void)filterVerticalListRenderer:(id)verticalListRenderer
++ (void)filterVerticalListRenderer:(YTIVerticalListRenderer *)verticalListRenderer
                           snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
     if (!verticalListRenderer ||
         ![verticalListRenderer respondsToSelector:@selector(itemsArray)]) {
@@ -111,25 +111,50 @@
             (unsigned long)blockedIndexes.count);
 }
 
-+ (void)filterShelfCandidateIfSupported:(id)candidate
++ (BOOL)filterShelfCandidateIfSupported:(YTIShelfRenderer *)candidate
                                snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
-    if (![candidate respondsToSelector:@selector(content)]) {
-        return;
+    if (![candidate respondsToSelector:@selector(content)]) return NO;
+    YTIShelfSupportedRenderers *content = candidate.content;
+    if (!content) return NO;
+
+    SEL hasVerticalSelector =
+        NSSelectorFromString(@"hasVerticalListRenderer");
+    SEL hasHorizontalSelector =
+        NSSelectorFromString(@"hasHorizontalListRenderer");
+
+    if (![content respondsToSelector:hasVerticalSelector] ||
+        ![content respondsToSelector:hasHorizontalSelector]) {
+        return NO;
     }
 
-    YTIShelfSupportedRenderers *content =
-        [(YTIShelfRenderer *)candidate content];
-    if (!content) {
-        return;
+    BOOL (*hasVerticalIMP)(id, SEL) =
+        (BOOL (*)(id, SEL))[content methodForSelector:hasVerticalSelector];
+    BOOL (*hasHorizontalIMP)(id, SEL) =
+        (BOOL (*)(id, SEL))[content methodForSelector:hasHorizontalSelector];
+
+    if (!hasVerticalIMP || !hasHorizontalIMP) return NO;
+
+    BOOL verticalPresent =
+        hasVerticalIMP(content, hasVerticalSelector);
+    BOOL horizontalPresent =
+        hasHorizontalIMP(content, hasHorizontalSelector);
+
+    // A Shelf route must resolve uniquely before any direct mutation or whole-Shelf commit.
+    if (verticalPresent == horizontalPresent) return NO;
+
+    if (verticalPresent) {
+        YTIVerticalListRenderer *vertical = content.verticalListRenderer;
+        if (!vertical) return NO;
+
+        [self filterVerticalListRenderer:vertical snapshot:snapshot];
+        return NO;
     }
 
-    YTIVerticalListRenderer *verticalListRenderer =
-        content.verticalListRenderer;
-    if (!verticalListRenderer) {
-        return;
-    }
-
-    [self filterVerticalListRenderer:verticalListRenderer snapshot:snapshot];
+    YTIHorizontalListRenderer *horizontal = content.horizontalListRenderer;
+    if (!horizontal || ![horizontal respondsToSelector:@selector(itemsArray)]) return NO;
+    id items = horizontal.itemsArray;
+    if (![items isKindOfClass:[NSArray class]]) return NO;
+    return [NTYTProductionFilter shouldRemoveHorizontalListItems:(NSArray *)items snapshot:snapshot];
 }
 
 + (NSArray *)filteredSectionCollectionFromOriginal:(NSArray *)originalCollection {
@@ -160,7 +185,8 @@
                         [self filterItemSectionCandidate:(YTIItemSectionRenderer *)candidate
                                                 snapshot:snapshot];
                 } else if (shelfClass && [candidate isKindOfClass:shelfClass]) {
-                    [self filterShelfCandidateIfSupported:candidate snapshot:snapshot];
+                    removeCandidate = [self filterShelfCandidateIfSupported:(YTIShelfRenderer *)candidate
+                                                                    snapshot:snapshot];
                 }
             } @catch (NSException *candidateException) {
                 NTYTLog(@"[Filter] section candidate fail-open: %@",
@@ -184,6 +210,27 @@
         NTYTLog(@"[Filter] section collection fail-open: %@",
                 containerException.reason ?: @"<unknown>");
         return originalCollection;
+    }
+}
+
++ (NSArray *)filteredStandaloneHorizontalContinuationContents:(NSArray *)contents {
+    @try {
+        if (![contents isKindOfClass:[NSArray class]] || contents.count == 0) return contents;
+        NTYTRuntimeSettingsSnapshot *snapshot = [[NTYTSnapshotHolder sharedHolder] currentSnapshot];
+        if (!snapshot) return contents;
+        NSMutableArray *retained = [NSMutableArray arrayWithCapacity:contents.count];
+        BOOL removed = NO;
+        for (id element in contents) {
+            if ([NTYTProductionFilter shouldRemoveStandaloneHorizontalElement:element snapshot:snapshot]) {
+                removed = YES;
+            } else {
+                [retained addObject:element];
+            }
+        }
+        // Keep original identity if nothing changed; otherwise preserve each retained object and order.
+        return removed ? [retained copy] : contents;
+    } @catch (__unused NSException *exception) {
+        return contents;
     }
 }
 

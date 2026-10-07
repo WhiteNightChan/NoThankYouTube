@@ -19,7 +19,7 @@ FOUNDATION_EXPORT NSString *NTYTEditActionTitle(void);
 FOUNDATION_EXPORT NSString *NTYTDoneTitle(void);
 FOUNDATION_EXPORT NSString *NTYTSelectAllTitle(void);
 FOUNDATION_EXPORT NSString *NTYTDeselectAllTitle(void);
-FOUNDATION_EXPORT NSString *NTYTHideMixTitle(void);
+FOUNDATION_EXPORT NSString *NTYTBlockOptionTitle(NTYTBlockOptionID optionID);
 
 FOUNDATION_EXPORT NSString *NTYTAddTitle(void);
 FOUNDATION_EXPORT NSString *NTYTEditTitle(void);

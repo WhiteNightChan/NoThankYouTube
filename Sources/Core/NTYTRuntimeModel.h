@@ -2,6 +2,7 @@
 
 #import "NTYTListDefinition.h"
 #import "NTYTTypes.h"
+#import "NTYTBlockOptions.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -73,10 +74,10 @@ NS_ASSUME_NONNULL_BEGIN
 @interface NTYTRuntimeSettingsSnapshot : NSObject
 
 @property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTRuntimeListState *> *listStates;
-@property(nonatomic, readonly) BOOL hideMix;
+@property(nonatomic, strong, readonly) NTYTBlockOptions *blockOptions;
 
 - (instancetype)initWithListStates:(NSDictionary<NSNumber *, NTYTRuntimeListState *> *)listStates
-                            hideMix:(BOOL)hideMix NS_DESIGNATED_INITIALIZER;
+                            blockOptions:(NTYTBlockOptions *)blockOptions NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 - (nullable NTYTRuntimeListState *)stateForListID:(NTYTListID)listID;
 + (instancetype)emptySnapshot;

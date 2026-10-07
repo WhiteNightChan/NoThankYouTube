@@ -71,6 +71,21 @@ typedef NS_ENUM(NSInteger, NTYTListOptionID) {
     NTYTListOptionIDExactMatch = 1,
 };
 
+typedef NS_ENUM(NSInteger, NTYTBlockOptionID) {
+    NTYTBlockOptionIDShorts = 0,
+    NTYTBlockOptionIDPost,
+    NTYTBlockOptionIDPlaylist,
+    NTYTBlockOptionIDMix,
+    NTYTBlockOptionIDHorizontalShelf,
+    NTYTBlockOptionIDFromYouTube,
+};
+
+typedef NS_ENUM(NSInteger, NTYTOptionPhaseOutcome) {
+    NTYTOptionPhaseOutcomeNoBlock = 0,
+    NTYTOptionPhaseOutcomeBlock,
+    NTYTOptionPhaseOutcomeInternalFailure,
+};
+
 typedef NS_ENUM(NSInteger, NTYTMatcherKind) {
     NTYTMatcherKindPlain = 0,
     NTYTMatcherKindRegex = 1,

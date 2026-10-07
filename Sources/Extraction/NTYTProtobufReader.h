@@ -21,6 +21,11 @@ FOUNDATION_EXPORT NSErrorDomain const NTYTProtobufReaderErrorDomain;
                                                      inMessage:(NSData *)message
                                                           error:(NSError * _Nullable * _Nullable)error;
 
+// nil means scanning failed; false means safely absent, regardless of wire type.
++ (nullable NSNumber *)hasDirectField:(uint32_t)fieldNumber
+                               inData:(NSData *)data
+                                error:(NSError * _Nullable * _Nullable)error;
+
 @end
 
 NS_ASSUME_NONNULL_END

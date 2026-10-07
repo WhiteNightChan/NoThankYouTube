@@ -41,6 +41,16 @@
     %orig(filtered);
 }
 
+- (id)insertContents:(NSArray *)contents
+          byPosition:(int)position
+           inSection:(id)section
+               error:(NSError **)error {
+    NSArray *filtered = [NTYTSectionCollectionAdapter
+        filteredStandaloneHorizontalContinuationContents:contents];
+    // Always preserve the original position dispatch, model update, return and error path.
+    return %orig(filtered, position, section, error);
+}
+
 %end
 
 %ctor {

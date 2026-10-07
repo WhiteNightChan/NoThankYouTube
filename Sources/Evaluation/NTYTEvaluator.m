@@ -3,6 +3,7 @@
 #import "Core/NTYTContentMetadata.h"
 #import "Core/NTYTListDefinition.h"
 #import "Core/NTYTRuntimeModel.h"
+#import "Core/NTYTSemanticQualification.h"
 
 @interface NTYTEvaluator ()
 
@@ -57,6 +58,64 @@
 
 @implementation NTYTEvaluator
 
++ (NTYTOptionPhaseOutcome)optionOutcomeForQualification:(NTYTSemanticQualificationResult *)qualification
+                                               snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
+    @try {
+        if (![qualification isKindOfClass:[NTYTSemanticQualificationResult class]] ||
+            ![snapshot isKindOfClass:[NTYTRuntimeSettingsSnapshot class]] ||
+            ![snapshot.blockOptions isKindOfClass:[NTYTBlockOptions class]]) {
+            return NTYTOptionPhaseOutcomeInternalFailure;
+        }
+        // Invalid semantic inputs are internal failure, not target uncertainty.
+        if (qualification.contentFamily < NTYTContentFamilyUnresolved ||
+            qualification.contentFamily > NTYTContentFamilyPlaylist ||
+            qualification.playlistSubtype < NTYTPlaylistSubtypeUnresolved ||
+            qualification.playlistSubtype > NTYTPlaylistSubtypeMix ||
+            qualification.shortsClassification < NTYTShortsClassificationUnavailable ||
+            qualification.shortsClassification > NTYTShortsClassificationNonShorts ||
+            qualification.horizontalShelf < NTYTPresentationQualificationUnavailable ||
+            qualification.horizontalShelf > NTYTPresentationQualificationConfirmed ||
+            qualification.shortsShelf < NTYTPresentationQualificationUnavailable ||
+            qualification.shortsShelf > NTYTPresentationQualificationConfirmed ||
+            qualification.fromYouTubeCell < NTYTPresentationQualificationUnavailable ||
+            qualification.fromYouTubeCell > NTYTPresentationQualificationConfirmed ||
+            qualification.horizontalShelfException < NTYTHorizontalShelfExceptionUnavailable ||
+            qualification.horizontalShelfException > NTYTHorizontalShelfExceptionOther ||
+            (qualification.horizontalShelf != NTYTPresentationQualificationConfirmed &&
+             qualification.horizontalShelfException != NTYTHorizontalShelfExceptionUnavailable) ||
+            (qualification.contentFamily != NTYTContentFamilyPlaylist &&
+             qualification.playlistSubtype != NTYTPlaylistSubtypeUnresolved) ||
+            ((qualification.contentFamily == NTYTContentFamilyPost ||
+              qualification.contentFamily == NTYTContentFamilyPlaylist) &&
+             qualification.shortsClassification != NTYTShortsClassificationNonShorts) ||
+            (qualification.contentFamily == NTYTContentFamilyUnresolved &&
+             qualification.shortsClassification != NTYTShortsClassificationUnavailable) ||
+            (qualification.fromYouTubeCell == NTYTPresentationQualificationConfirmed &&
+             qualification.contentFamily == NTYTContentFamilyVideo &&
+             qualification.shortsClassification != NTYTShortsClassificationUnavailable)) {
+            return NTYTOptionPhaseOutcomeInternalFailure;
+        }
+
+        NTYTBlockOptions *options = snapshot.blockOptions;
+        BOOL block =
+            (options.blockShorts &&
+             (qualification.shortsClassification == NTYTShortsClassificationShorts ||
+              qualification.shortsShelf == NTYTPresentationQualificationConfirmed)) ||
+            (options.blockPost && qualification.contentFamily == NTYTContentFamilyPost) ||
+            (options.blockPlaylist && qualification.contentFamily == NTYTContentFamilyPlaylist) ||
+            (options.blockMix && qualification.contentFamily == NTYTContentFamilyPlaylist &&
+             qualification.playlistSubtype == NTYTPlaylistSubtypeMix) ||
+            (options.blockHorizontalShelf &&
+             qualification.horizontalShelf == NTYTPresentationQualificationConfirmed &&
+             qualification.horizontalShelfException == NTYTHorizontalShelfExceptionOther) ||
+            (options.blockFromYouTube &&
+             qualification.fromYouTubeCell == NTYTPresentationQualificationConfirmed);
+        return block ? NTYTOptionPhaseOutcomeBlock : NTYTOptionPhaseOutcomeNoBlock;
+    } @catch (__unused NSException *exception) {
+        return NTYTOptionPhaseOutcomeInternalFailure;
+    }
+}
+
 + (NTYTDecision)decisionForMetadata:(NTYTContentMetadata *)metadata
                             snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
     if (!metadata || !snapshot || metadata.contentType == NTYTContentTypeUnresolved) {
@@ -64,10 +123,6 @@
     }
 
     @try {
-        if (metadata.contentType == NTYTContentTypePlaylistMix && snapshot.hideMix) {
-            return NTYTDecisionBlock;
-        }
-
         BOOL internalFailure = NO;
         NTYTMatchResult allowResult =
             [self evaluatePhaseLists:@[

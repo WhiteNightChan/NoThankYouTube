@@ -131,11 +131,12 @@
 @implementation NTYTRuntimeSettingsSnapshot
 
 - (instancetype)initWithListStates:(NSDictionary<NSNumber *,NTYTRuntimeListState *> *)listStates
-                            hideMix:(BOOL)hideMix {
+                            blockOptions:(NTYTBlockOptions *)blockOptions {
     self = [super init];
     if (self) {
         _listStates = [listStates copy];
-        _hideMix = hideMix;
+        NSParameterAssert(blockOptions);
+        _blockOptions = blockOptions;
     }
     return self;
 }
@@ -153,7 +154,7 @@
                                                  options:definition.defaultOptions
                                                    rules:@[]];
     }
-    return [[self alloc] initWithListStates:states hideMix:NO];
+    return [[self alloc] initWithListStates:states blockOptions:[NTYTBlockOptions allOffOptions]];
 }
 
 @end

@@ -15,10 +15,11 @@
 @implementation NTYTOptionSwitch
 @end
 
-@interface NTYTHideMixSwitch : UISwitch
+@interface NTYTBlockOptionSwitch : UISwitch
+@property(nonatomic) NTYTBlockOptionID optionID;
 @end
 
-@implementation NTYTHideMixSwitch
+@implementation NTYTBlockOptionSwitch
 @end
 
 @interface NTYTCategoryViewController ()
@@ -54,6 +55,9 @@
                 break;
             case NTYTSettingsCategoryPageGlobal:
                 _listIDs = @[@(NTYTListIDGlobalBlock), @(NTYTListIDGlobalAllow)];
+                break;
+            case NTYTSettingsCategoryPageOption:
+                _listIDs = @[];
                 break;
         }
     }
@@ -140,16 +144,14 @@
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return self.listIDs.count +
-        (self.categoryPage == NTYTSettingsCategoryPagePlaylists ? 1 : 0);
+    return self.categoryPage == NTYTSettingsCategoryPageOption ? 1 : self.listIDs.count;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    if (self.categoryPage == NTYTSettingsCategoryPagePlaylists && section == 0) {
-        return 1;
+    if (self.categoryPage == NTYTSettingsCategoryPageOption) {
+        return 6;
     }
-    NSInteger listSection = section -
-        (self.categoryPage == NTYTSettingsCategoryPagePlaylists ? 1 : 0);
+    NSInteger listSection = section;
     NTYTListDefinition *definition =
         [NTYTListDefinition definitionForListID:(NTYTListID)self.listIDs[listSection].integerValue];
     return 1 + definition.supportedOptions.count;
@@ -164,21 +166,26 @@
     cell.accessoryType = UITableViewCellAccessoryNone;
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
 
-    if (self.categoryPage == NTYTSettingsCategoryPagePlaylists && indexPath.section == 0) {
-        [cell configureWithText:NTYTHideMixTitle()];
+    if (self.categoryPage == NTYTSettingsCategoryPageOption) {
+        NSArray<NSNumber *> *optionIDs = @[
+            @(NTYTBlockOptionIDShorts), @(NTYTBlockOptionIDPost),
+            @(NTYTBlockOptionIDPlaylist), @(NTYTBlockOptionIDMix),
+            @(NTYTBlockOptionIDHorizontalShelf), @(NTYTBlockOptionIDFromYouTube),
+        ];
+        NTYTBlockOptionID optionID = (NTYTBlockOptionID)optionIDs[indexPath.row].integerValue;
+        [cell configureWithText:NTYTBlockOptionTitle(optionID)];
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
-        NTYTHideMixSwitch *toggle = [NTYTHideMixSwitch new];
-        toggle.on = NTYTSettingsCoordinator.sharedCoordinator.hideMixEnabled;
+        NTYTBlockOptionSwitch *toggle = [NTYTBlockOptionSwitch new];
+        toggle.optionID = optionID;
+        toggle.on = [NTYTSettingsCoordinator.sharedCoordinator effectiveValueForBlockOption:optionID];
         toggle.enabled = NTYTSettingsCoordinator.sharedCoordinator.mutationsAllowed;
-        [toggle addTarget:self
-                   action:@selector(hideMixSwitchChanged:)
+        [toggle addTarget:self action:@selector(blockOptionSwitchChanged:)
          forControlEvents:UIControlEventValueChanged];
         cell.accessoryView = toggle;
         return cell;
     }
 
-    NSInteger listSection = indexPath.section -
-        (self.categoryPage == NTYTSettingsCategoryPagePlaylists ? 1 : 0);
+    NSInteger listSection = indexPath.section;
     NTYTListID listID = (NTYTListID)self.listIDs[listSection].integerValue;
     NTYTListDefinition *definition = [NTYTListDefinition definitionForListID:listID];
 
@@ -218,20 +225,20 @@
     if (indexPath.row != 0) {
         return;
     }
-    if (self.categoryPage == NTYTSettingsCategoryPagePlaylists && indexPath.section == 0) {
+    if (self.categoryPage == NTYTSettingsCategoryPageOption) {
         return;
     }
-    NSInteger listSection = indexPath.section -
-        (self.categoryPage == NTYTSettingsCategoryPagePlaylists ? 1 : 0);
+    NSInteger listSection = indexPath.section;
     NTYTListID listID = (NTYTListID)self.listIDs[listSection].integerValue;
     NTYTRuleListViewController *controller =
         [[NTYTRuleListViewController alloc] initWithListID:listID title:NTYTListTitle(listID)];
     [self.navigationController pushViewController:controller animated:YES];
 }
 
-- (void)hideMixSwitchChanged:(NTYTHideMixSwitch *)sender {
+- (void)blockOptionSwitchChanged:(NTYTBlockOptionSwitch *)sender {
     NTYTMutationResult *result =
-        [[NTYTSettingsCoordinator sharedCoordinator] setHideMixEnabled:sender.isOn];
+        [[NTYTSettingsCoordinator sharedCoordinator] setEffectiveValue:sender.isOn
+                                                      forBlockOption:sender.optionID];
     [self.tableView reloadData];
     [self updateLifecyclePresentation];
     if (!result.isSuccess) {

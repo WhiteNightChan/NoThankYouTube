@@ -113,7 +113,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
   semanticallyEqualTo:(NTYTStoredSettings *)second;
 - (NTYTStoredSettings *)settingsByReplacingList:(NTYTStoredList *)list
                                           listID:(NTYTListID)listID;
-- (NTYTStoredSettings *)settingsByReplacingHideMix:(BOOL)hideMix;
+- (NTYTStoredSettings *)settingsByReplacingBlockOption:(NTYTBlockOptionID)optionID
+                                               value:(BOOL)value;
 - (NSUInteger)findRuleID:(NSUUID *)ruleID inRules:(NSArray<NTYTStoredRule *> *)rules;
 - (BOOL)rules:(NSArray<NTYTStoredRule *> *)rules
     containExpressionDuplicate:(NSString *)expression
@@ -260,12 +261,13 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     return value;
 }
 
-- (BOOL)hideMixEnabled {
-    __block BOOL enabled = NO;
+- (BOOL)effectiveValueForBlockOption:(NTYTBlockOptionID)optionID {
+    __block BOOL value = NO;
     [self performSynchronous:^{
-        enabled = self.committedSettings.hideMix;
+        if (optionID < NTYTBlockOptionIDShorts || optionID > NTYTBlockOptionIDFromYouTube) return;
+        value = [self.committedSettings.blockOptions valueForOption:optionID];
     }];
-    return enabled;
+    return value;
 }
 
 - (NTYTMutationResult *)addExpression:(NSString *)rawExpression listID:(NTYTListID)listID {
@@ -519,21 +521,28 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     return result;
 }
 
-- (NTYTMutationResult *)setHideMixEnabled:(BOOL)enabled {
+- (NTYTMutationResult *)setEffectiveValue:(BOOL)value
+                           forBlockOption:(NTYTBlockOptionID)optionID {
     __block NTYTMutationResult *result;
     [self performSynchronous:^{
         if (![self mutationsAllowedOnQueue]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorMutationProtected
                                                  reason:NTYTMutationFailureReasonMutationProtected
-                                           underlyingError:nil];
+                                        underlyingError:nil];
             return;
         }
-        if (self.committedSettings.hideMix == enabled) {
+        if (optionID < NTYTBlockOptionIDShorts || optionID > NTYTBlockOptionIDFromYouTube) {
+            result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
+                                                 reason:NTYTMutationFailureReasonUnsupportedOption
+                                        underlyingError:nil];
+            return;
+        }
+        if ([self.committedSettings.blockOptions valueForOption:optionID] == value) {
             result = [NTYTMutationResult noChangeResult];
             return;
         }
         result = [self commitCandidateSettingsOnQueue:
-            [self settingsByReplacingHideMix:enabled]];
+            [self settingsByReplacingBlockOption:optionID value:value]];
     }];
     return result;
 }
@@ -573,7 +582,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
         [self.committedSettings.lists mutableCopy];
     lists[@(listID)] = list;
     return [[NTYTStoredSettings alloc] initWithLists:lists
-                                            hideMix:self.committedSettings.hideMix];
+                                            blockOptions:self.committedSettings.blockOptions];
 }
 
 - (BOOL)commitPreparedSettingsOnQueue:(NTYTStoredSettings *)settings
@@ -592,7 +601,14 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 
 - (BOOL)settings:(NTYTStoredSettings *)first
   semanticallyEqualTo:(NTYTStoredSettings *)second {
-    if (first.hideMix != second.hideMix) {
+    NTYTBlockOptions *aOptions = first.blockOptions;
+    NTYTBlockOptions *bOptions = second.blockOptions;
+    if (aOptions.blockShorts != bOptions.blockShorts ||
+        aOptions.blockPost != bOptions.blockPost ||
+        aOptions.blockPlaylist != bOptions.blockPlaylist ||
+        aOptions.blockMix != bOptions.blockMix ||
+        aOptions.blockHorizontalShelf != bOptions.blockHorizontalShelf ||
+        aOptions.blockFromYouTube != bOptions.blockFromYouTube) {
         return NO;
     }
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
@@ -674,9 +690,18 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     return capture;
 }
 
-- (NTYTStoredSettings *)settingsByReplacingHideMix:(BOOL)hideMix {
+- (NTYTStoredSettings *)settingsByReplacingBlockOption:(NTYTBlockOptionID)optionID
+                                               value:(BOOL)value {
+    NTYTBlockOptions *current = self.committedSettings.blockOptions;
+    NTYTBlockOptions *options = [[NTYTBlockOptions alloc]
+        initWithBlockShorts:optionID == NTYTBlockOptionIDShorts ? value : current.blockShorts
+                 blockPost:optionID == NTYTBlockOptionIDPost ? value : current.blockPost
+             blockPlaylist:optionID == NTYTBlockOptionIDPlaylist ? value : current.blockPlaylist
+                  blockMix:optionID == NTYTBlockOptionIDMix ? value : current.blockMix
+      blockHorizontalShelf:optionID == NTYTBlockOptionIDHorizontalShelf ? value : current.blockHorizontalShelf
+          blockFromYouTube:optionID == NTYTBlockOptionIDFromYouTube ? value : current.blockFromYouTube];
     return [[NTYTStoredSettings alloc] initWithLists:self.committedSettings.lists
-                                            hideMix:hideMix];
+                                      blockOptions:options];
 }
 
 - (NSUInteger)findRuleID:(NSUUID *)ruleID inRules:(NSArray<NTYTStoredRule *> *)rules {

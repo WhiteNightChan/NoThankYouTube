@@ -6,6 +6,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (NSArray *)filteredSectionCollectionFromOriginal:(NSArray *)originalCollection;
 
++ (NSArray *)filteredStandaloneHorizontalContinuationContents:(NSArray *)contents;
+
 @end
 
 NS_ASSUME_NONNULL_END

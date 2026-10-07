@@ -22,7 +22,13 @@
 "ui.list.rules" = "ルール";
 "ui.option.case_sensitive" = "大文字と小文字を区別";
 "ui.option.exact_match" = "完全一致";
-"ui.option.hide_mix" = "Mixを非表示";
+"ui.category.option" = "オプション";
+"ui.block_option.shorts" = "ショート動画をブロック";
+"ui.block_option.post" = "コミュニティ投稿をブロック";
+"ui.block_option.playlist" = "再生リストをブロック";
+"ui.block_option.mix" = "ミックスリストをブロック";
+"ui.block_option.horizontal_shelf" = "Horizontal Shelfをブロック";
+"ui.block_option.from_youtube" = "「YouTubeより」をブロック";
 "ui.option.generic" = "オプション";
 "ui.lifecycle.absent" = "未作成";
 "ui.lifecycle.supported_valid" = "対応 / 正常";

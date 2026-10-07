@@ -39,6 +39,7 @@ NSString *NTYTCategoryTitle(NSUInteger categoryIndex) {
         case 3: return NTYTLocalizedString(@"ui.category.post");
         case 4: return NTYTLocalizedString(@"ui.category.playlist");
         case 5: return NTYTLocalizedString(@"ui.category.global");
+        case 6: return NTYTLocalizedString(@"ui.category.option");
     }
     return NTYTAppName();
 }
@@ -74,7 +75,17 @@ NSString *NTYTEditActionTitle(void) { return NTYTLocalizedString(@"ui.common.act
 NSString *NTYTDoneTitle(void) { return NTYTLocalizedString(@"ui.common.action.done"); }
 NSString *NTYTSelectAllTitle(void) { return NTYTLocalizedString(@"ui.common.action.select_all"); }
 NSString *NTYTDeselectAllTitle(void) { return NTYTLocalizedString(@"ui.common.action.deselect_all"); }
-NSString *NTYTHideMixTitle(void) { return NTYTLocalizedString(@"ui.option.hide_mix"); }
+NSString *NTYTBlockOptionTitle(NTYTBlockOptionID optionID) {
+    switch (optionID) {
+        case NTYTBlockOptionIDShorts: return NTYTLocalizedString(@"ui.block_option.shorts");
+        case NTYTBlockOptionIDPost: return NTYTLocalizedString(@"ui.block_option.post");
+        case NTYTBlockOptionIDPlaylist: return NTYTLocalizedString(@"ui.block_option.playlist");
+        case NTYTBlockOptionIDMix: return NTYTLocalizedString(@"ui.block_option.mix");
+        case NTYTBlockOptionIDHorizontalShelf: return NTYTLocalizedString(@"ui.block_option.horizontal_shelf");
+        case NTYTBlockOptionIDFromYouTube: return NTYTLocalizedString(@"ui.block_option.from_youtube");
+    }
+    return NTYTLocalizedString(@"ui.category.option");
+}
 
 NSString *NTYTAddTitle(void) { return NTYTLocalizedString(@"ui.rule.editor.add_title"); }
 NSString *NTYTEditTitle(void) { return NTYTLocalizedString(@"ui.rule.editor.edit_title"); }

@@ -42,6 +42,11 @@ static NSError *NTYTAssemblyError(NSString *message) {
 
     @try {
         __block BOOL degraded = rawSettings.baseDegraded;
+        NTYTBlockOptions *blockOptions = rawSettings.blockOptions;
+        if (![blockOptions isKindOfClass:[NTYTBlockOptions class]]) {
+            degraded = YES;
+            blockOptions = [NTYTBlockOptions allOffOptions];
+        }
         NSMutableSet<NSString *> *acceptedUUIDs = [NSMutableSet set];
         NSMutableDictionary<NSNumber *, NTYTStoredList *> *storedLists =
             [NSMutableDictionary dictionary];
@@ -144,10 +149,10 @@ static NSError *NTYTAssemblyError(NSString *message) {
 
         NTYTStoredSettings *acceptedSettings =
             [[NTYTStoredSettings alloc] initWithLists:storedLists
-                                              hideMix:rawSettings.hideMix];
+                                              blockOptions:blockOptions];
         NTYTRuntimeSettingsSnapshot *snapshot =
             [[NTYTRuntimeSettingsSnapshot alloc] initWithListStates:runtimeLists
-                                                            hideMix:rawSettings.hideMix];
+                                                            blockOptions:blockOptions];
         return [[NTYTSnapshotAssemblyResult alloc]
             initWithAcceptedSettings:acceptedSettings
                              snapshot:snapshot
@@ -186,7 +191,7 @@ static NSError *NTYTAssemblyError(NSString *message) {
     NTYTRawSettings *raw = [[NTYTRawSettings alloc] initWithAbsent:NO
                                                      baseDegraded:NO
                                                             lists:rawLists
-                                                          hideMix:settings.hideMix];
+                                                          blockOptions:settings.blockOptions];
     NSError *assemblyError = nil;
     NTYTSnapshotAssemblyResult *result = [self assembleRawSettings:raw error:&assemblyError];
     if (!result || result.hadDegradation) {

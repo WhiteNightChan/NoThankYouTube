@@ -22,7 +22,13 @@
 "ui.list.rules" = "Rules";
 "ui.option.case_sensitive" = "Case Sensitive";
 "ui.option.exact_match" = "Exact Match";
-"ui.option.hide_mix" = "Hide Mix";
+"ui.category.option" = "Option";
+"ui.block_option.shorts" = "Block Shorts";
+"ui.block_option.post" = "Block Posts";
+"ui.block_option.playlist" = "Block Playlists";
+"ui.block_option.mix" = "Block Mix";
+"ui.block_option.horizontal_shelf" = "Block Horizontal Shelves";
+"ui.block_option.from_youtube" = "Block \"From YouTube\" Cell";
 "ui.option.generic" = "Option";
 "ui.lifecycle.absent" = "Absent";
 "ui.lifecycle.supported_valid" = "Supported / Valid";

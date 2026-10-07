@@ -48,7 +48,7 @@ typedef NS_ENUM(NSInteger, NTYTImportCommitStatus) {
 - (BOOL)mutationsAllowed;
 - (NSArray<NTYTStoredRule *> *)rulesForListID:(NTYTListID)listID;
 - (BOOL)effectiveValueForOption:(NTYTListOptionID)optionID listID:(NTYTListID)listID;
-- (BOOL)hideMixEnabled;
+- (BOOL)effectiveValueForBlockOption:(NTYTBlockOptionID)optionID;
 
 - (NTYTMutationResult *)addExpression:(NSString *)rawExpression listID:(NTYTListID)listID;
 - (NTYTMutationResult *)editRuleID:(NSUUID *)ruleID
@@ -62,7 +62,8 @@ typedef NS_ENUM(NSInteger, NTYTImportCommitStatus) {
 - (NTYTMutationResult *)setEffectiveValue:(BOOL)value
                                 forOption:(NTYTListOptionID)optionID
                                     listID:(NTYTListID)listID;
-- (NTYTMutationResult *)setHideMixEnabled:(BOOL)enabled;
+- (NTYTMutationResult *)setEffectiveValue:(BOOL)value
+                           forBlockOption:(NTYTBlockOptionID)optionID;
 
 // A nil token starts an attempt; a returned token authorizes only that destination state.
 - (NTYTImportCommitResult *)commitPreparedImport:(NTYTPreparedImport *)prepared

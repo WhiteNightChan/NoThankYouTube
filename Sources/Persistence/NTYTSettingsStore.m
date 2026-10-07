@@ -103,7 +103,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         NTYTRawSettings *raw = [[NTYTRawSettings alloc] initWithAbsent:YES
                                                          baseDegraded:NO
                                                                 lists:emptyLists
-                                                              hideMix:NO];
+                                                              blockOptions:[NTYTBlockOptions allOffOptions]];
         return [[NTYTSettingsLoadResult alloc]
             initWithLifecycleState:NTYTSettingsLifecycleStateAbsent
                        rawSettings:raw
@@ -149,7 +149,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     __block BOOL degraded = NO;
     NSSet *allowedRootKeys = [NSSet setWithArray:@[
         @"schemaVersion", @"syntaxVersion", @"general", @"videos", @"channels",
-        @"posts", @"playlists", @"global",
+        @"posts", @"playlists", @"global", @"options",
     ]];
     for (id key in root) {
         if (![key isKindOfClass:[NSString class]] || ![allowedRootKeys containsObject:key]) {
@@ -162,7 +162,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         @"videos": [NSSet setWithArray:@[@"title", @"channel", @"id"]],
         @"channels": [NSSet setWithArray:@[@"block", @"allow"]],
         @"posts": [NSSet setWithArray:@[@"content", @"channel"]],
-        @"playlists": [NSSet setWithArray:@[@"options", @"title", @"channel", @"id"]],
+        @"playlists": [NSSet setWithArray:@[@"title", @"channel", @"id"]],
         @"global": [NSSet setWithArray:@[@"block", @"allow"]],
     };
     [allowedSectionKeys enumerateKeysAndObjectsUsingBlock:^(NSString *sectionKey,
@@ -183,27 +183,36 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         }
     }];
 
-    BOOL hideMix = NO;
-    id playlistsObject = root[@"playlists"];
-    if ([playlistsObject isKindOfClass:[NSDictionary class]]) {
-        id playlistOptionsObject = ((NSDictionary *)playlistsObject)[@"options"];
-        if (playlistOptionsObject) {
-            if (![playlistOptionsObject isKindOfClass:[NSDictionary class]]) {
-                degraded = YES;
-            } else {
-                NSDictionary *playlistOptions = (NSDictionary *)playlistOptionsObject;
-                for (id key in playlistOptions) {
-                    if (![key isKindOfClass:[NSString class]] ||
-                        ![(NSString *)key isEqualToString:@"hideMix"] ||
-                        !NTYTIsPropertyListBoolean(playlistOptions[key])) {
-                        degraded = YES;
-                        continue;
-                    }
-                    hideMix = [playlistOptions[key] boolValue];
+    // Missing and explicit false are both effective Off. Only true survives canonically.
+    NSMutableDictionary<NSString *, NSNumber *> *validBlockValues = [NSMutableDictionary dictionary];
+    id blockOptionsObject = root[@"options"];
+    if (blockOptionsObject) {
+        if (![blockOptionsObject isKindOfClass:[NSDictionary class]]) {
+            degraded = YES;
+        } else {
+            NSSet<NSString *> *known = [NSSet setWithArray:@[
+                @"blockShorts", @"blockPost", @"blockPlaylist", @"blockMix",
+                @"blockHorizontalShelf", @"blockFromYouTube",
+            ]];
+            NSDictionary *options = (NSDictionary *)blockOptionsObject;
+            for (id key in options) {
+                id value = options[key];
+                if (![key isKindOfClass:[NSString class]] ||
+                    ![known containsObject:key] || !NTYTIsPropertyListBoolean(value)) {
+                    degraded = YES;
+                    continue;
                 }
+                validBlockValues[key] = @([value boolValue]);
             }
         }
     }
+    NTYTBlockOptions *blockOptions = [[NTYTBlockOptions alloc]
+        initWithBlockShorts:[validBlockValues[@"blockShorts"] boolValue]
+                 blockPost:[validBlockValues[@"blockPost"] boolValue]
+             blockPlaylist:[validBlockValues[@"blockPlaylist"] boolValue]
+                  blockMix:[validBlockValues[@"blockMix"] boolValue]
+      blockHorizontalShelf:[validBlockValues[@"blockHorizontalShelf"] boolValue]
+          blockFromYouTube:[validBlockValues[@"blockFromYouTube"] boolValue]];
 
     NSMutableDictionary<NSNumber *, NTYTRawList *> *rawLists = [NSMutableDictionary dictionary];
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
@@ -242,7 +251,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         [[NTYTRawSettings alloc] initWithAbsent:NO
                                    baseDegraded:degraded
                                           lists:rawLists
-                                        hideMix:hideMix];
+                                        blockOptions:blockOptions];
     NTYTSettingsLifecycleState state = degraded
         ? NTYTSettingsLifecycleStateSupportedDegraded
         : NTYTSettingsLifecycleStateSupportedValid;
@@ -438,14 +447,15 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         section[definition.storagePath[1]] = listDictionary;
     }
 
-    if (settings.hideMix) {
-        NSMutableDictionary *playlists = root[@"playlists"];
-        if (!playlists) {
-            playlists = [NSMutableDictionary dictionary];
-            root[@"playlists"] = playlists;
-        }
-        playlists[@"options"] = [@{@"hideMix": @YES} mutableCopy];
-    }
+    NTYTBlockOptions *state = settings.blockOptions;
+    NSMutableDictionary *options = [NSMutableDictionary dictionary];
+    if (state.blockShorts) options[@"blockShorts"] = @YES;
+    if (state.blockPost) options[@"blockPost"] = @YES;
+    if (state.blockPlaylist) options[@"blockPlaylist"] = @YES;
+    if (state.blockMix) options[@"blockMix"] = @YES;
+    if (state.blockHorizontalShelf) options[@"blockHorizontalShelf"] = @YES;
+    if (state.blockFromYouTube) options[@"blockFromYouTube"] = @YES;
+    if (options.count > 0) root[@"options"] = options;
     return root;
 }
 

@@ -104,6 +104,13 @@ static BOOL NTYTSkipWireValue(const uint8_t *bytes,
     }
 }
 
+@interface NTYTProtobufReader ()
++ (nullable NSArray<NSData *> *)lengthDelimitedValuesForField:(uint32_t)fieldNumber
+                                                     inData:(NSData *)data
+                                               fieldPresent:(BOOL * _Nullable)fieldPresent
+                                                      error:(NSError * _Nullable * _Nullable)error;
+@end
+
 @implementation NTYTProtobufReader
 
 + (BOOL)validateMessageData:(NSData *)data error:(NSError **)error {
@@ -159,6 +166,25 @@ static BOOL NTYTSkipWireValue(const uint8_t *bytes,
 + (NSArray<NSData *> *)lengthDelimitedValuesForField:(uint32_t)fieldNumber
                                                 inData:(NSData *)data
                                                  error:(NSError **)error {
+    return [self lengthDelimitedValuesForField:fieldNumber inData:data fieldPresent:NULL error:error];
+}
+
++ (NSNumber *)hasDirectField:(uint32_t)fieldNumber inData:(NSData *)data error:(NSError **)error {
+    if (fieldNumber == 0 || fieldNumber > NTYTMaximumProtobufFieldNumber) {
+        if (error) *error = NTYTProtoError(14, @"The protobuf field presence request is invalid.");
+        return nil;
+    }
+    BOOL present = NO;
+    NSArray *scanned = [self lengthDelimitedValuesForField:fieldNumber
+                                                  inData:data fieldPresent:&present error:error];
+    return scanned ? @(present) : nil;
+}
+
++ (NSArray<NSData *> *)lengthDelimitedValuesForField:(uint32_t)fieldNumber
+                                             inData:(NSData *)data
+                                       fieldPresent:(BOOL *)fieldPresent
+                                              error:(NSError **)error {
+    if (fieldPresent) *fieldPresent = NO;
     if (![data isKindOfClass:[NSData class]]) {
         if (error) {
             *error = NTYTProtoError(3, @"The protobuf message is not NSData.");
@@ -188,6 +214,10 @@ static BOOL NTYTSkipWireValue(const uint8_t *bytes,
                 *error = NTYTProtoError(5, @"A protobuf field is invalid in this message context.");
             }
             return nil;
+        }
+
+        if (fieldPresent && (uint32_t)fieldValue == fieldNumber) {
+            *fieldPresent = YES;
         }
 
         if (wireType == 2) {
