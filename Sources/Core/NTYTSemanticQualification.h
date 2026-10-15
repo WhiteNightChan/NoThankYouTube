@@ -39,6 +39,8 @@ typedef NS_ENUM(NSInteger, NTYTHorizontalShelfException) {
 @property(nonatomic, readonly) NTYTHorizontalShelfException horizontalShelfException;
 @property(nonatomic, readonly) NTYTPresentationQualification shortsShelf;
 @property(nonatomic, readonly) NTYTPresentationQualification fromYouTubeCell;
+@property(nonatomic, readonly) NTYTPresentationQualification adSupportedFreeMovie;
+@property(nonatomic, readonly) NTYTPresentationQualification cellDivider;
 @property(nonatomic, readonly) NTYTContentType projectedContentType;
 
 - (instancetype)initWithContentFamily:(NTYTContentFamily)contentFamily
@@ -47,7 +49,9 @@ typedef NS_ENUM(NSInteger, NTYTHorizontalShelfException) {
                       horizontalShelf:(NTYTPresentationQualification)horizontalShelf
              horizontalShelfException:(NTYTHorizontalShelfException)horizontalShelfException
                           shortsShelf:(NTYTPresentationQualification)shortsShelf
-                      fromYouTubeCell:(NTYTPresentationQualification)fromYouTubeCell NS_DESIGNATED_INITIALIZER;
+                      fromYouTubeCell:(NTYTPresentationQualification)fromYouTubeCell
+                 adSupportedFreeMovie:(NTYTPresentationQualification)adSupportedFreeMovie
+                          cellDivider:(NTYTPresentationQualification)cellDivider NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end

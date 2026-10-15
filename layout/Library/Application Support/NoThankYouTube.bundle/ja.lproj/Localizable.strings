@@ -19,6 +19,7 @@
 "ui.list.video_id" = "動画ID";
 "ui.list.content" = "内容";
 "ui.list.playlist_id" = "再生リストID";
+"ui.list.post_id" = "投稿ID";
 "ui.list.rules" = "ルール";
 "ui.option.case_sensitive" = "大文字と小文字を区別";
 "ui.option.exact_match" = "完全一致";
@@ -29,6 +30,8 @@
 "ui.block_option.mix" = "ミックスリストをブロック";
 "ui.block_option.horizontal_shelf" = "Horizontal Shelfをブロック";
 "ui.block_option.from_youtube" = "「YouTubeより」をブロック";
+"ui.block_option.ad_supported_free_movie" = "広告付き無料映画をブロック";
+"ui.block_option.cell_divider" = "Cell Divider をブロック";
 "ui.option.generic" = "オプション";
 "ui.lifecycle.absent" = "未作成";
 "ui.lifecycle.supported_valid" = "対応 / 正常";

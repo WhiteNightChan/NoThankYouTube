@@ -67,8 +67,26 @@ static NSString *NTYTChannelCollectionLogValue(NTYTChannelIdentityCollection *co
     NTYTElementQualification *qualification = standaloneOnly
         ? [NTYTContentQualifier qualificationForStandaloneHorizontalElementRenderer:element]
         : [NTYTContentQualifier qualificationForElementRenderer:element];
+
+    NTYTSemanticQualificationResult *semanticResult = qualification.semanticResult;
     NTYTOptionPhaseOutcome outcome = [NTYTEvaluator
-        optionOutcomeForQualification:qualification.semanticResult snapshot:snapshot];
+        optionOutcomeForQualification:semanticResult snapshot:snapshot];
+
+    NTYTLog(@"[FilterQual] child=%lu standaloneHorizontalOnly=%@ family=%ld playlistSubtype=%ld shortsClassification=%ld horizontalShelf=%ld horizontalShelfException=%ld shortsShelf=%ld fromYouTubeCell=%ld adSupportedFreeMovie=%ld cellDivider=%ld projectedType=%ld optionOutcome=%ld",
+            (unsigned long)childIndex,
+            standaloneOnly ? @"YES" : @"NO",
+            (long)semanticResult.contentFamily,
+            (long)semanticResult.playlistSubtype,
+            (long)semanticResult.shortsClassification,
+            (long)semanticResult.horizontalShelf,
+            (long)semanticResult.horizontalShelfException,
+            (long)semanticResult.shortsShelf,
+            (long)semanticResult.fromYouTubeCell,
+            (long)semanticResult.adSupportedFreeMovie,
+            (long)semanticResult.cellDivider,
+            (long)semanticResult.projectedContentType,
+            (long)outcome);
+
     if (outcome == NTYTOptionPhaseOutcomeBlock) return NTYTDecisionBlock;
     if (outcome == NTYTOptionPhaseOutcomeInternalFailure) return NTYTDecisionNoMatch;
     if (outcome != NTYTOptionPhaseOutcomeNoBlock) return NTYTDecisionNoMatch;
@@ -90,11 +108,19 @@ static NSString *NTYTChannelCollectionLogValue(NTYTChannelIdentityCollection *co
     }
     NTYTContentMetadata *metadata = extraction.metadata;
     NTYTDecision decision = [NTYTEvaluator decisionForMetadata:metadata snapshot:snapshot];
-    NTYTLog(@"[Filter] child=%lu type=%ld shortsClassification=%ld videoID=%@ title=%@ postBody=%@ playlistID=%@ channels=[%@] decision=%ld",
-            (unsigned long)childIndex, (long)metadata.contentType, (long)metadata.shortsClassification,
-            NTYTMetadataLogValue(metadata.videoID), NTYTMetadataLogValue(metadata.title),
-            NTYTMetadataLogValue(metadata.postBody), NTYTMetadataLogValue(metadata.playlistID),
-            NTYTChannelCollectionLogValue(metadata.channelIdentityCollection), (long)decision);
+    NTYTLog(@"[Filter] child=%lu type=%ld shortsClassification=%ld upcomingClassification=%ld currentClassification=%ld videoID=%@ title=%@ postBody=%@ postID=%@ playlistID=%@ channels=[%@] decision=%ld",
+            (unsigned long)childIndex,
+            (long)metadata.contentType,
+            (long)metadata.shortsClassification,
+            (long)metadata.upcomingClassification,
+            (long)metadata.currentClassification,
+            NTYTMetadataLogValue(metadata.videoID),
+            NTYTMetadataLogValue(metadata.title),
+            NTYTMetadataLogValue(metadata.postBody),
+            NTYTMetadataLogValue(metadata.postID),
+            NTYTMetadataLogValue(metadata.playlistID),
+            NTYTChannelCollectionLogValue(metadata.channelIdentityCollection),
+            (long)decision);
     return decision;
 }
 

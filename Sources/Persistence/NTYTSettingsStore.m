@@ -161,7 +161,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         @"general": [NSSet setWithArray:@[@"block", @"allow"]],
         @"videos": [NSSet setWithArray:@[@"title", @"channel", @"id"]],
         @"channels": [NSSet setWithArray:@[@"block", @"allow"]],
-        @"posts": [NSSet setWithArray:@[@"content", @"channel"]],
+        @"posts": [NSSet setWithArray:@[@"content", @"channel", @"id"]],
         @"playlists": [NSSet setWithArray:@[@"title", @"channel", @"id"]],
         @"global": [NSSet setWithArray:@[@"block", @"allow"]],
     };
@@ -193,6 +193,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
             NSSet<NSString *> *known = [NSSet setWithArray:@[
                 @"blockShorts", @"blockPost", @"blockPlaylist", @"blockMix",
                 @"blockHorizontalShelf", @"blockFromYouTube",
+                @"blockAdSupportedFreeMovie", @"blockCellDivider",
             ]];
             NSDictionary *options = (NSDictionary *)blockOptionsObject;
             for (id key in options) {
@@ -212,7 +213,9 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
              blockPlaylist:[validBlockValues[@"blockPlaylist"] boolValue]
                   blockMix:[validBlockValues[@"blockMix"] boolValue]
       blockHorizontalShelf:[validBlockValues[@"blockHorizontalShelf"] boolValue]
-          blockFromYouTube:[validBlockValues[@"blockFromYouTube"] boolValue]];
+          blockFromYouTube:[validBlockValues[@"blockFromYouTube"] boolValue]
+ blockAdSupportedFreeMovie:[validBlockValues[@"blockAdSupportedFreeMovie"] boolValue]
+          blockCellDivider:[validBlockValues[@"blockCellDivider"] boolValue]];
 
     NSMutableDictionary<NSNumber *, NTYTRawList *> *rawLists = [NSMutableDictionary dictionary];
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
@@ -455,6 +458,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     if (state.blockMix) options[@"blockMix"] = @YES;
     if (state.blockHorizontalShelf) options[@"blockHorizontalShelf"] = @YES;
     if (state.blockFromYouTube) options[@"blockFromYouTube"] = @YES;
+    if (state.blockAdSupportedFreeMovie) options[@"blockAdSupportedFreeMovie"] = @YES;
+    if (state.blockCellDivider) options[@"blockCellDivider"] = @YES;
     if (options.count > 0) root[@"options"] = options;
     return root;
 }

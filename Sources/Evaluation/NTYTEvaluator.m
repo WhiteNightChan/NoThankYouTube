@@ -79,6 +79,10 @@
             qualification.shortsShelf > NTYTPresentationQualificationConfirmed ||
             qualification.fromYouTubeCell < NTYTPresentationQualificationUnavailable ||
             qualification.fromYouTubeCell > NTYTPresentationQualificationConfirmed ||
+            qualification.adSupportedFreeMovie < NTYTPresentationQualificationUnavailable ||
+            qualification.adSupportedFreeMovie > NTYTPresentationQualificationConfirmed ||
+            qualification.cellDivider < NTYTPresentationQualificationUnavailable ||
+            qualification.cellDivider > NTYTPresentationQualificationConfirmed ||
             qualification.horizontalShelfException < NTYTHorizontalShelfExceptionUnavailable ||
             qualification.horizontalShelfException > NTYTHorizontalShelfExceptionOther ||
             (qualification.horizontalShelf != NTYTPresentationQualificationConfirmed &&
@@ -109,7 +113,11 @@
              qualification.horizontalShelf == NTYTPresentationQualificationConfirmed &&
              qualification.horizontalShelfException == NTYTHorizontalShelfExceptionOther) ||
             (options.blockFromYouTube &&
-             qualification.fromYouTubeCell == NTYTPresentationQualificationConfirmed);
+             qualification.fromYouTubeCell == NTYTPresentationQualificationConfirmed) ||
+            (options.blockAdSupportedFreeMovie &&
+             qualification.adSupportedFreeMovie == NTYTPresentationQualificationConfirmed) ||
+            (options.blockCellDivider &&
+             qualification.cellDivider == NTYTPresentationQualificationConfirmed);
         return block ? NTYTOptionPhaseOutcomeBlock : NTYTOptionPhaseOutcomeNoBlock;
     } @catch (__unused NSException *exception) {
         return NTYTOptionPhaseOutcomeInternalFailure;
@@ -152,6 +160,7 @@
                 @(NTYTListIDChannelsBlock),
                 @(NTYTListIDPostContent),
                 @(NTYTListIDPostChannel),
+                @(NTYTListIDPostID),
                 @(NTYTListIDPlaylistTitle),
                 @(NTYTListIDPlaylistChannel),
                 @(NTYTListIDPlaylistID),
@@ -307,6 +316,9 @@
         case NTYTTargetKindPostBody:
             return [self evaluateExpression:expression value:metadata.postBody options:options
                             internalFailure:internalFailure];
+        case NTYTTargetKindPostID:
+            return [self evaluateExpression:expression value:metadata.postID options:options
+                            internalFailure:internalFailure];
         case NTYTTargetKindPlaylistID:
             return [self evaluateExpression:expression value:metadata.playlistID options:options
                             internalFailure:internalFailure];
@@ -436,6 +448,36 @@
             }
             break;
 
+        case NTYTModifierKindUpcoming:
+        case NTYTModifierKindCurrent: {
+            if (modifier.matcherExpression) {
+                *internalFailure = YES;
+                return NTYTMatchResultNoMatch;
+            }
+            if (metadata.contentType != NTYTContentTypeVideo) {
+                result = NTYTMatchResultNoMatch;
+                break;
+            }
+            NTYTTemporalClassification classification =
+                modifier.kind == NTYTModifierKindUpcoming
+                    ? metadata.upcomingClassification : metadata.currentClassification;
+            switch (classification) {
+                case NTYTTemporalClassificationConfirmed:
+                    result = NTYTMatchResultMatch;
+                    break;
+                case NTYTTemporalClassificationNotConfirmed:
+                    result = NTYTMatchResultNoMatch;
+                    break;
+                case NTYTTemporalClassificationUnavailable:
+                    result = NTYTMatchResultUnavailable;
+                    break;
+                default:
+                    *internalFailure = YES;
+                    return NTYTMatchResultNoMatch;
+            }
+            break;
+        }
+
         default:
             *internalFailure = YES;
             return NTYTMatchResultNoMatch;
@@ -475,6 +517,8 @@
         case NTYTModifierKindPost:
         case NTYTModifierKindPlaylist:
         case NTYTModifierKindShorts:
+        case NTYTModifierKindUpcoming:
+        case NTYTModifierKindCurrent:
             *internalFailure = YES;
             return nil;
 

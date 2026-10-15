@@ -90,6 +90,23 @@ static NTYTPresentationQualification NTYTPresentationForMessages(NSArray<NSData 
                               : NTYTPresentationQualificationNotConfirmed;
 }
 
+static NTYTPresentationQualification NTYTAdSupportedFreeMovieQualification(NSData *data) {
+    NSArray<NSData *> *messages = NTYTSafeMessages(
+        data,
+        @[@1, @168777401, @5, @232954548, @18, @1, @21, @8178, @3,
+          @514549827, @1, @2, @1147]);
+    if (!messages) return NTYTPresentationQualificationUnavailable;
+    BOOL foundPositive = NO;
+    for (NSData *message in messages) {
+        NSArray<NSNumber *> *values =
+            [NTYTProtobufReader varintValuesForField:3 inData:message error:nil];
+        if (!values) return NTYTPresentationQualificationUnavailable;
+        if ([values containsObject:@3]) foundPositive = YES;
+    }
+    return foundPositive ? NTYTPresentationQualificationConfirmed
+                         : NTYTPresentationQualificationNotConfirmed;
+}
+
 static NSArray<NSData *> *NTYTStandaloneHorizontalPayloads(NSData *data) {
     return NTYTSafeMessages(data, @[@1, @168777401, @5, @312131490, @20]);
 }
@@ -193,7 +210,9 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
          shortsClassification:NTYTShortsClassificationUnavailable
               horizontalShelf:NTYTPresentationQualificationUnavailable
      horizontalShelfException:NTYTHorizontalShelfExceptionUnavailable
-                  shortsShelf:state fromYouTubeCell:NTYTPresentationQualificationUnavailable];
+                  shortsShelf:state fromYouTubeCell:NTYTPresentationQualificationUnavailable
+             adSupportedFreeMovie:NTYTPresentationQualificationUnavailable
+                      cellDivider:NTYTPresentationQualificationUnavailable];
 }
 
 @interface NTYTContentQualifier ()
@@ -230,6 +249,8 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
     NTYTShortsClassification shorts = NTYTShortsClassificationUnavailable;
     NTYTPresentationQualification fromYouTube = NTYTPresentationQualificationUnavailable;
     NTYTPresentationQualification shortsShelf = NTYTPresentationQualificationUnavailable;
+    NTYTPresentationQualification freeMovie = NTYTPresentationQualificationUnavailable;
+    NTYTPresentationQualification cellDivider = NTYTPresentationQualificationUnavailable;
     NTYTVideoCellVariant variant = NTYTVideoCellVariantStandard;
 
     if (!standaloneOnly) {
@@ -247,7 +268,11 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
         }
         fromYouTube = NTYTPresentationForMessages(NTYTSafeMessages(data, @[@1, @168777401, @5, @400581496]));
         BOOL fromYouTubeVideo = fromYouTube == NTYTPresentationQualificationConfirmed;
-        BOOL video = standardVideo || fromYouTubeVideo;
+        freeMovie = NTYTAdSupportedFreeMovieQualification(data);
+        cellDivider = NTYTPresentationForMessages(
+            NTYTSafeMessages(data, @[@1, @168777401, @5, @347043917]));
+        BOOL video = standardVideo || fromYouTubeVideo ||
+                     freeMovie == NTYTPresentationQualificationConfirmed;
         BOOL playlist = NTYTPlaylistFamilyPositive(data);
         NSUInteger positiveFamilies = (video ? 1 : 0) + (post ? 1 : 0) + (playlist ? 1 : 0);
         if (positiveFamilies == 1) {
@@ -275,7 +300,8 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
     NTYTSemanticQualificationResult *semantic = [[NTYTSemanticQualificationResult alloc]
         initWithContentFamily:family playlistSubtype:subtype shortsClassification:shorts
               horizontalShelf:horizontal horizontalShelfException:horizontalException
-                  shortsShelf:shortsShelf fromYouTubeCell:fromYouTube];
+                  shortsShelf:shortsShelf fromYouTubeCell:fromYouTube
+             adSupportedFreeMovie:freeMovie cellDivider:cellDivider];
     return [[NTYTElementQualification alloc] initWithSemanticResult:semantic
                                              validatedElementData:data videoCellVariant:variant];
 }

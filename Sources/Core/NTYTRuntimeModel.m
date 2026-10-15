@@ -88,7 +88,9 @@
     NSParameterAssert(kind == NTYTModifierKindVideo ||
                       kind == NTYTModifierKindPost ||
                       kind == NTYTModifierKindPlaylist ||
-                      kind == NTYTModifierKindShorts);
+                      kind == NTYTModifierKindShorts ||
+                      kind == NTYTModifierKindUpcoming ||
+                      kind == NTYTModifierKindCurrent);
     return [[self alloc] initWithKind:kind
                             negative:negative
                    matcherExpression:nil];

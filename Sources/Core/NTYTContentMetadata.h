@@ -49,17 +49,23 @@ typedef NS_ENUM(NSInteger, NTYTChannelIdentityCollectionState) {
 
 @property(nonatomic, readonly) NTYTContentType contentType;
 @property(nonatomic, readonly) NTYTShortsClassification shortsClassification;
+@property(nonatomic, readonly) NTYTTemporalClassification upcomingClassification;
+@property(nonatomic, readonly) NTYTTemporalClassification currentClassification;
 @property(nonatomic, strong, readonly) NTYTMetadataValue *videoID;
 @property(nonatomic, strong, readonly) NTYTMetadataValue *title;
 @property(nonatomic, strong, readonly) NTYTMetadataValue *postBody;
+@property(nonatomic, strong, readonly) NTYTMetadataValue *postID;
 @property(nonatomic, strong, readonly) NTYTMetadataValue *playlistID;
 @property(nonatomic, strong, readonly) NTYTChannelIdentityCollection *channelIdentityCollection;
 
 - (instancetype)initWithContentType:(NTYTContentType)contentType
                shortsClassification:(NTYTShortsClassification)shortsClassification
+             upcomingClassification:(NTYTTemporalClassification)upcomingClassification
+              currentClassification:(NTYTTemporalClassification)currentClassification
                              videoID:(NTYTMetadataValue *)videoID
                                title:(NTYTMetadataValue *)title
                             postBody:(NTYTMetadataValue *)postBody
+                              postID:(NTYTMetadataValue *)postID
                           playlistID:(NTYTMetadataValue *)playlistID
          channelIdentityCollection:(NTYTChannelIdentityCollection *)channelIdentityCollection NS_DESIGNATED_INITIALIZER;
 

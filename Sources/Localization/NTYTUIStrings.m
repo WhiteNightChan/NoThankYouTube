@@ -25,6 +25,8 @@ NSString *NTYTListTitle(NTYTListID listID) {
             return NTYTLocalizedString(@"ui.list.video_id");
         case NTYTListIDPostContent:
             return NTYTLocalizedString(@"ui.list.content");
+        case NTYTListIDPostID:
+            return NTYTLocalizedString(@"ui.list.post_id");
         case NTYTListIDPlaylistID:
             return NTYTLocalizedString(@"ui.list.playlist_id");
     }
@@ -83,6 +85,8 @@ NSString *NTYTBlockOptionTitle(NTYTBlockOptionID optionID) {
         case NTYTBlockOptionIDMix: return NTYTLocalizedString(@"ui.block_option.mix");
         case NTYTBlockOptionIDHorizontalShelf: return NTYTLocalizedString(@"ui.block_option.horizontal_shelf");
         case NTYTBlockOptionIDFromYouTube: return NTYTLocalizedString(@"ui.block_option.from_youtube");
+        case NTYTBlockOptionIDAdSupportedFreeMovie: return NTYTLocalizedString(@"ui.block_option.ad_supported_free_movie");
+        case NTYTBlockOptionIDCellDivider: return NTYTLocalizedString(@"ui.block_option.cell_divider");
     }
     return NTYTLocalizedString(@"ui.category.option");
 }

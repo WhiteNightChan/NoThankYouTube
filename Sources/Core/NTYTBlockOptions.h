@@ -13,13 +13,17 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly) BOOL blockMix;
 @property(nonatomic, readonly) BOOL blockHorizontalShelf;
 @property(nonatomic, readonly) BOOL blockFromYouTube;
+@property(nonatomic, readonly) BOOL blockAdSupportedFreeMovie;
+@property(nonatomic, readonly) BOOL blockCellDivider;
 
 - (instancetype)initWithBlockShorts:(BOOL)blockShorts
                           blockPost:(BOOL)blockPost
                       blockPlaylist:(BOOL)blockPlaylist
                            blockMix:(BOOL)blockMix
                blockHorizontalShelf:(BOOL)blockHorizontalShelf
-                   blockFromYouTube:(BOOL)blockFromYouTube NS_DESIGNATED_INITIALIZER;
+                   blockFromYouTube:(BOOL)blockFromYouTube
+          blockAdSupportedFreeMovie:(BOOL)blockAdSupportedFreeMovie
+                   blockCellDivider:(BOOL)blockCellDivider NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 - (BOOL)valueForOption:(NTYTBlockOptionID)optionID;
 + (instancetype)allOffOptions;

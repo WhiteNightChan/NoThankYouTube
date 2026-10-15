@@ -117,9 +117,12 @@
 
 - (instancetype)initWithContentType:(NTYTContentType)contentType
                shortsClassification:(NTYTShortsClassification)shortsClassification
+             upcomingClassification:(NTYTTemporalClassification)upcomingClassification
+              currentClassification:(NTYTTemporalClassification)currentClassification
                              videoID:(NTYTMetadataValue *)videoID
                                title:(NTYTMetadataValue *)title
                             postBody:(NTYTMetadataValue *)postBody
+                              postID:(NTYTMetadataValue *)postID
                           playlistID:(NTYTMetadataValue *)playlistID
          channelIdentityCollection:(NTYTChannelIdentityCollection *)channelIdentityCollection {
     self = [super init];
@@ -128,13 +131,22 @@
         NSParameterAssert(shortsClassification == NTYTShortsClassificationShorts ||
                           shortsClassification == NTYTShortsClassificationNonShorts ||
                           shortsClassification == NTYTShortsClassificationUnavailable);
-        NSParameterAssert(videoID && title && postBody && playlistID &&
+        NSParameterAssert(upcomingClassification == NTYTTemporalClassificationConfirmed ||
+                          upcomingClassification == NTYTTemporalClassificationNotConfirmed ||
+                          upcomingClassification == NTYTTemporalClassificationUnavailable);
+        NSParameterAssert(currentClassification == NTYTTemporalClassificationConfirmed ||
+                          currentClassification == NTYTTemporalClassificationNotConfirmed ||
+                          currentClassification == NTYTTemporalClassificationUnavailable);
+        NSParameterAssert(videoID && title && postBody && postID && playlistID &&
                           channelIdentityCollection);
         _contentType = contentType;
         _shortsClassification = shortsClassification;
+        _upcomingClassification = upcomingClassification;
+        _currentClassification = currentClassification;
         _videoID = videoID;
         _title = title;
         _postBody = postBody;
+        _postID = postID;
         _playlistID = playlistID;
         _channelIdentityCollection = channelIdentityCollection;
     }

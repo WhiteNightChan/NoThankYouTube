@@ -8,7 +8,9 @@
                       horizontalShelf:(NTYTPresentationQualification)horizontalShelf
              horizontalShelfException:(NTYTHorizontalShelfException)horizontalShelfException
                           shortsShelf:(NTYTPresentationQualification)shortsShelf
-                      fromYouTubeCell:(NTYTPresentationQualification)fromYouTubeCell {
+                      fromYouTubeCell:(NTYTPresentationQualification)fromYouTubeCell
+                 adSupportedFreeMovie:(NTYTPresentationQualification)adSupportedFreeMovie
+                          cellDivider:(NTYTPresentationQualification)cellDivider {
     self = [super init];
     if (self) {
         _contentFamily = contentFamily;
@@ -18,6 +20,8 @@
         _horizontalShelfException = horizontalShelfException;
         _shortsShelf = shortsShelf;
         _fromYouTubeCell = fromYouTubeCell;
+        _adSupportedFreeMovie = adSupportedFreeMovie;
+        _cellDivider = cellDivider;
     }
     return self;
 }

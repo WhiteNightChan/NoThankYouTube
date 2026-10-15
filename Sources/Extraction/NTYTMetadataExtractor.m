@@ -12,6 +12,66 @@ static NSError *NTYTExtractionError(NSInteger code, NSString *message) {
                            userInfo:@{NSLocalizedDescriptionKey: message}];
 }
 
+// Accepted temporal shapes are evaluated only for an already-qualified Video.
+// Repeated occurrences do not introduce an occurrence-count requirement.
+static BOOL NTYTAllVarintsEqual(NSArray<NSNumber *> *values, uint64_t expected) {
+    if (values.count == 0) return NO;
+    for (NSNumber *value in values) {
+        if (value.unsignedLongLongValue != expected) return NO;
+    }
+    return YES;
+}
+
+static void NTYTVideoTemporalClassifications(NSData *data,
+                                              NTYTTemporalClassification *upcoming,
+                                              NTYTTemporalClassification *current) {
+    *upcoming = NTYTTemporalClassificationUnavailable;
+    *current = NTYTTemporalClassificationUnavailable;
+    @try {
+        NSArray<NSData *> *messages = [NTYTProtobufReader
+            messagesAtPath:@[@1, @168777401, @5, @232954548, @18, @1, @1]
+                    inData:data error:nil];
+        if (!messages || messages.count == 0) return;
+
+        BOOL classified = NO;
+        NTYTTemporalClassification resolvedUpcoming = NTYTTemporalClassificationUnavailable;
+        NTYTTemporalClassification resolvedCurrent = NTYTTemporalClassificationUnavailable;
+        for (NSData *message in messages) {
+            NSArray<NSNumber *> *field12 =
+                [NTYTProtobufReader varintValuesForField:12 inData:message error:nil];
+            NSArray<NSNumber *> *field4 =
+                [NTYTProtobufReader varintValuesForField:4 inData:message error:nil];
+            NSArray<NSNumber *> *field16 =
+                [NTYTProtobufReader varintValuesForField:16 inData:message error:nil];
+            NSNumber *field12Present = [NTYTProtobufReader hasDirectField:12 inData:message error:nil];
+            NSNumber *field4Present = [NTYTProtobufReader hasDirectField:4 inData:message error:nil];
+            if (!field12 || !field4 || !field16 || !field12Present || !field4Present ||
+                !NTYTAllVarintsEqual(field16, 1)) return;
+
+            NTYTTemporalClassification messageUpcoming = NTYTTemporalClassificationNotConfirmed;
+            NTYTTemporalClassification messageCurrent = NTYTTemporalClassificationNotConfirmed;
+            if (NTYTAllVarintsEqual(field12, 1) && !field4Present.boolValue) {
+                messageUpcoming = NTYTTemporalClassificationConfirmed;
+            } else if (!field12Present.boolValue && NTYTAllVarintsEqual(field4, 2)) {
+                messageCurrent = NTYTTemporalClassificationConfirmed;
+            } else if (!field12Present.boolValue && NTYTAllVarintsEqual(field4, 1)) {
+                // Both are NotConfirmed; no third temporal semantic is created.
+            } else {
+                return;
+            }
+            if (classified && (messageUpcoming != resolvedUpcoming ||
+                               messageCurrent != resolvedCurrent)) return;
+            resolvedUpcoming = messageUpcoming;
+            resolvedCurrent = messageCurrent;
+            classified = YES;
+        }
+        *upcoming = resolvedUpcoming;
+        *current = resolvedCurrent;
+    } @catch (__unused NSException *exception) {
+        // Classifier uncertainty does not discard independent Video metadata.
+    }
+}
+
 static NSArray<NSNumber *> *NTYTFromYouTubeVideoIDProviderAPath(void) {
     return @[@1, @168777401, @5, @400581496, @2, @2, @5, @169495254,
              @98150882, @1, @66439850, @1, @66441155, @3, @73080600];
@@ -149,10 +209,9 @@ static NSString *NTYTExactlyOneMessageString(NSData *data,
 }
 
 static NSString *NTYTSemanticHandleFromSourceString(NSString *source) {
-    if ([source hasPrefix:@"/@"]) {
-        return [source substringFromIndex:1];
-    }
-    return source;
+    NSString *normalized = [source hasPrefix:@"/@"] ? [source substringFromIndex:1] : source;
+    NSString *decoded = [normalized stringByRemovingPercentEncoding];
+    return decoded ?: normalized;
 }
 
 static NTYTMetadataValue *NTYTMetadataValueForString(NSString *value) {
@@ -368,7 +427,8 @@ static NTYTChannelIdentityCollection *NTYTCollaboratorCollection(NSData *data) {
 
 static NTYTChannelIdentityCollection *NTYTVideoChannelCollection(
     NSData *data,
-    NSDictionary<NSNumber *, NSString *> *rich) {
+    NSDictionary<NSNumber *, NSString *> *rich,
+    NTYTPresentationQualification freeMovieQualification) {
     // Only a qualified Video reaches this discriminator. A failed traversal
     // cannot safely authorize the ordinary single-creator providers.
     NSArray<NSData *> *branches =
@@ -386,33 +446,47 @@ static NTYTChannelIdentityCollection *NTYTVideoChannelCollection(
     NSString *channelB = NTYTExactlyOneMessageString(data,
                                                       NTYTChannelProviderBPath(),
                                                       9, YES);
-    NSString *channelID = NTYTReconcileStrings(channelA[@2], channelB);
+    NSString *channelAID = channelA[@2];
+    if (freeMovieQualification == NTYTPresentationQualificationConfirmed &&
+        [channelAID isEqualToString:@"FEstorefront"]) {
+        // Observed physical value; no adopted semantic channel_id binding (Design 4.4).
+        channelAID = nil;
+    }
+    NSString *channelID = NTYTReconcileStrings(channelAID, channelB);
     return NTYTSingleChannelCollection(NTYTMetadataValueForString(channelID),
                                        NTYTMetadataValueForString(rich[@37]),
                                        NTYTMetadataValueForString(channelA[@4]));
 }
 
 static NTYTContentMetadata *NTYTVideoMetadata(NSData *data,
-                                              NTYTShortsClassification shortsClassification) {
+                                              NTYTShortsClassification shortsClassification,
+                                              NTYTTemporalClassification upcomingClassification,
+                                              NTYTTemporalClassification currentClassification,
+                                              NTYTPresentationQualification freeMovieQualification) {
     NSString *videoID = NTYTResolvedVideoID(data);
     NSDictionary<NSNumber *, NSString *> *rich =
         shortsClassification == NTYTShortsClassificationShorts
             ? NTYTShortsVideoRichFields(data)
             : NTYTVideoRichFields(data, videoID);
-    NTYTChannelIdentityCollection *channels = NTYTVideoChannelCollection(data, rich);
+    NTYTChannelIdentityCollection *channels = NTYTVideoChannelCollection(data, rich, freeMovieQualification);
 
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypeVideo
        shortsClassification:shortsClassification
+     upcomingClassification:upcomingClassification
+      currentClassification:currentClassification
                     videoID:NTYTMetadataValueForString(videoID)
                       title:NTYTMetadataValueForString(rich[@36])
                    postBody:[NTYTMetadataValue unavailableValue]
+                     postID:[NTYTMetadataValue unavailableValue]
                  playlistID:[NTYTMetadataValue unavailableValue]
          channelIdentityCollection:channels];
 }
 
 static NTYTContentMetadata *NTYTFromYouTubeVideoMetadata(NSData *data,
-                                                         NTYTShortsClassification shortsClassification) {
+                                                         NTYTShortsClassification shortsClassification,
+                                                         NTYTTemporalClassification upcomingClassification,
+                                                         NTYTTemporalClassification currentClassification) {
     NSString *videoIDA = NTYTExactlyOneMessageString(data, NTYTFromYouTubeVideoIDProviderAPath(), 1, YES);
     NSString *videoIDB = NTYTExactlyOneMessageString(data, NTYTFromYouTubeVideoIDProviderBPath(), 2, YES);
     NSString *videoID = NTYTReconcileStrings(videoIDA, videoIDB);
@@ -427,9 +501,12 @@ static NTYTContentMetadata *NTYTFromYouTubeVideoMetadata(NSData *data,
         NTYTMetadataValueForString(sourceHandle ? NTYTSemanticHandleFromSourceString(sourceHandle) : nil));
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypeVideo shortsClassification:shortsClassification
+     upcomingClassification:upcomingClassification
+      currentClassification:currentClassification
                     videoID:NTYTMetadataValueForString(videoID)
                       title:NTYTMetadataValueForString(title)
                    postBody:[NTYTMetadataValue unavailableValue]
+                     postID:[NTYTMetadataValue unavailableValue]
                  playlistID:[NTYTMetadataValue unavailableValue]
          channelIdentityCollection:channels];
 }
@@ -442,10 +519,8 @@ static NSArray<NSNumber *> *NTYTPostPath(NSNumber *root,
     return path;
 }
 
-static NSString *NTYTPostField(NSData *data,
-                               NSArray<NSNumber *> *suffix,
-                               uint32_t fieldNumber,
-                               BOOL requireNonEmpty) {
+static NSArray<NSData *> *NTYTPostProviderMessages(NSData *data,
+                                                     NSArray<NSNumber *> *suffix) {
     NSMutableArray<NSData *> *messages = [NSMutableArray array];
     for (NSNumber *root in NTYTPostRoots()) {
         NSArray<NSData *> *candidates =
@@ -457,10 +532,58 @@ static NSString *NTYTPostField(NSData *data,
         }
         [messages addObjectsFromArray:candidates];
     }
-    if (messages.count != 1) {
-        return nil;
-    }
+    return messages;
+}
+
+static NSString *NTYTPostField(NSData *data,
+                               NSArray<NSNumber *> *suffix,
+                               uint32_t fieldNumber,
+                               BOOL requireNonEmpty) {
+    NSArray<NSData *> *messages = NTYTPostProviderMessages(data, suffix);
+    if (messages.count != 1) return nil;
     return NTYTDirectString(messages.firstObject, fieldNumber, requireNonEmpty);
+}
+
+static NSString *NTYTPostIDTokenFromPayload(NSData *payload) {
+    NSString *source = [[NSString alloc] initWithData:payload encoding:NSUTF8StringEncoding];
+    NSString *decoded = [source stringByRemovingPercentEncoding];
+    if (!decoded) return nil;
+    NSString *base64 = [[decoded stringByReplacingOccurrencesOfString:@"-" withString:@"+"]
+        stringByReplacingOccurrencesOfString:@"_" withString:@"/"];
+    NSUInteger remainder = base64.length % 4;
+    if (remainder == 1) return nil;
+    if (remainder != 0) {
+        base64 = [base64 stringByPaddingToLength:base64.length + 4 - remainder
+                                    withString:@"=" startingAtIndex:0];
+    }
+    NSData *inner = [[NSData alloc] initWithBase64EncodedString:base64 options:0];
+    if (!inner) return nil;
+    NSArray<NSString *> *values =
+        [NTYTProtobufReader UTF8StringsForDirectField:2 inMessage:inner error:nil];
+    if (!values || values.count == 0) return nil;
+    NSString *token = nil;
+    for (NSString *value in values) {
+        if (value.length == 0 || (token && ![token isEqualToString:value])) return nil;
+        token = value;
+    }
+    return token;
+}
+
+static NSString *NTYTPostID(NSData *data) {
+    NSArray<NSData *> *parents = NTYTPostProviderMessages(data, @[@1, @1, @5, @1]);
+    NSMutableSet<NSString *> *tokens = [NSMutableSet set];
+    for (NSData *parent in parents) {
+        for (uint32_t field = 1; field <= 3; field++) {
+            NSArray<NSData *> *payloads = [NTYTProtobufReader
+                lengthDelimitedValuesForField:field inData:parent error:nil];
+            for (NSData *payload in payloads) {
+                NSString *token = NTYTPostIDTokenFromPayload(payload);
+                if (token) [tokens addObject:token];
+            }
+        }
+    }
+    // Every successful candidate participates. Failed candidates supply no token.
+    return tokens.count == 1 ? tokens.anyObject : nil;
 }
 
 static NTYTContentMetadata *NTYTPostMetadata(NSData *data,
@@ -471,6 +594,7 @@ static NTYTContentMetadata *NTYTPostMetadata(NSData *data,
     NSString *channelID = NTYTPostField(data, channelSuffix, 2, YES);
     NSString *sourceHandle = NTYTPostField(data, channelSuffix, 4, YES);
     NSString *postBody = NTYTPostField(data, @[@1, @1, @4, @1], 1, NO);
+    NSString *postID = NTYTPostID(data);
     NTYTChannelIdentityCollection *channels = NTYTSingleChannelCollection(
         NTYTMetadataValueForString(channelID),
         NTYTMetadataValueForString(channelName),
@@ -480,9 +604,12 @@ static NTYTContentMetadata *NTYTPostMetadata(NSData *data,
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypePost
        shortsClassification:shortsClassification
+     upcomingClassification:NTYTTemporalClassificationNotConfirmed
+      currentClassification:NTYTTemporalClassificationNotConfirmed
                     videoID:[NTYTMetadataValue unavailableValue]
                       title:[NTYTMetadataValue unavailableValue]
                    postBody:NTYTMetadataValueForString(postBody)
+                     postID:NTYTMetadataValueForString(postID)
                  playlistID:[NTYTMetadataValue unavailableValue]
          channelIdentityCollection:channels];
 }
@@ -534,9 +661,12 @@ static NTYTContentMetadata *NTYTPlaylistMetadata(NSData *data,
     return [[NTYTContentMetadata alloc]
         initWithContentType:contentType
        shortsClassification:shortsClassification
+     upcomingClassification:NTYTTemporalClassificationNotConfirmed
+      currentClassification:NTYTTemporalClassificationNotConfirmed
                     videoID:[NTYTMetadataValue unavailableValue]
                       title:NTYTMetadataValueForString(title)
                    postBody:[NTYTMetadataValue unavailableValue]
+                     postID:[NTYTMetadataValue unavailableValue]
                  playlistID:NTYTMetadataValueForString(playlistID)
          channelIdentityCollection:channels];
 }
@@ -594,18 +724,24 @@ static NTYTContentMetadata *NTYTPlaylistMetadata(NSData *data,
 
         NTYTContentMetadata *metadata = nil;
         switch (contentType) {
-            case NTYTContentTypeVideo:
+            case NTYTContentTypeVideo: {
+                NTYTTemporalClassification upcoming;
+                NTYTTemporalClassification current;
+                NTYTVideoTemporalClassifications(data, &upcoming, &current);
                 switch (qualification.videoCellVariant) {
                     case NTYTVideoCellVariantFromYouTube:
-                        metadata = NTYTFromYouTubeVideoMetadata(data, qualification.semanticResult.shortsClassification);
+                        metadata = NTYTFromYouTubeVideoMetadata(data, qualification.semanticResult.shortsClassification,
+                                                             upcoming, current);
                         break;
                     case NTYTVideoCellVariantStandard:
-                        metadata = NTYTVideoMetadata(data, qualification.semanticResult.shortsClassification);
+                        metadata = NTYTVideoMetadata(data, qualification.semanticResult.shortsClassification,
+                                                   upcoming, current, qualification.semanticResult.adSupportedFreeMovie);
                         break;
                     default:
                         break;
                 }
                 break;
+            }
             case NTYTContentTypePost:
                 metadata = NTYTPostMetadata(data, qualification.semanticResult.shortsClassification);
                 break;

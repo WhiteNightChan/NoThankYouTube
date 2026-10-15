@@ -82,7 +82,7 @@ static BOOL NTYTExportSessionActive = NO;
         return;
     }
     UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc]
-        initForOpeningContentTypes:@[UTTypePropertyList]];
+        initForOpeningContentTypes:@[UTTypePropertyList] asCopy:YES];
     picker.allowsMultipleSelection = NO;
     picker.delegate = self;
     @try {

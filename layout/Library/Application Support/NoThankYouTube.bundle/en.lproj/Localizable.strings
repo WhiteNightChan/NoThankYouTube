@@ -19,6 +19,7 @@
 "ui.list.video_id" = "Video ID";
 "ui.list.content" = "Content";
 "ui.list.playlist_id" = "Playlist ID";
+"ui.list.post_id" = "Post ID";
 "ui.list.rules" = "Rules";
 "ui.option.case_sensitive" = "Case Sensitive";
 "ui.option.exact_match" = "Exact Match";
@@ -29,6 +30,8 @@
 "ui.block_option.mix" = "Block Mix";
 "ui.block_option.horizontal_shelf" = "Block Horizontal Shelves";
 "ui.block_option.from_youtube" = "Block \"From YouTube\" Cell";
+"ui.block_option.ad_supported_free_movie" = "Block Ad-Supported Free Movies";
+"ui.block_option.cell_divider" = "Block Cell Dividers";
 "ui.option.generic" = "Option";
 "ui.lifecycle.absent" = "Absent";
 "ui.lifecycle.supported_valid" = "Supported / Valid";

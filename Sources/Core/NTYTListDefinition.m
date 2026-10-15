@@ -163,6 +163,13 @@
                              storagePath:@[@"posts", @"channel"]
                         supportedOptions:plainOptions
                           defaultOptions:offOn],
+            [[self alloc] initWithListID:NTYTListIDPostID
+                                listKind:NTYTListKindBlock
+                              targetKind:NTYTTargetKindPostID
+                  applicableContentTypes:postContentTypes
+                             storagePath:@[@"posts", @"id"]
+                        supportedOptions:noOptions
+                          defaultOptions:onOn],
             [[self alloc] initWithListID:NTYTListIDPlaylistTitle
                                 listKind:NTYTListKindBlock
                               targetKind:NTYTTargetKindTitle

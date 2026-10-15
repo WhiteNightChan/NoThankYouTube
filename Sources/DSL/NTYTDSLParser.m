@@ -218,7 +218,9 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     BOOL isPost = [name isEqualToString:@"post"];
     BOOL isPlaylist = [name isEqualToString:@"playlist"];
     BOOL isShorts = [name isEqualToString:@"shorts"];
-    if (!isChannel && !isContent && !isVideo && !isPost && !isPlaylist && !isShorts) {
+    BOOL isUpcoming = [name isEqualToString:@"upcoming"];
+    BOOL isCurrent = [name isEqualToString:@"current"];
+    if (!isChannel && !isContent && !isVideo && !isPost && !isPlaylist && !isShorts && !isUpcoming && !isCurrent) {
         if (error) {
             *error = NTYTDSLErrorWithDetail(NTYTDSLErrorUnknownModifier, NTYTDSLErrorReasonUnknownModifier,
                                            [NSString stringWithFormat:@"Unknown modifier: %@", name],
@@ -227,7 +229,7 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         return nil;
     }
 
-    if (isVideo || isPost || isPlaylist || isShorts) {
+    if (isVideo || isPost || isPlaylist || isShorts || isUpcoming || isCurrent) {
         if (cursor >= expression.length || [expression characterAtIndex:cursor] != '}') {
             if (error) {
                 *error = NTYTDSLError(NTYTDSLErrorUnexpectedModifierValue,
@@ -239,10 +241,13 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
         if (nextIndex) {
             *nextIndex = cursor + 1;
         }
-        NTYTModifierKind kind = isVideo
-            ? NTYTModifierKindVideo
-            : (isPost ? NTYTModifierKindPost
-                      : (isPlaylist ? NTYTModifierKindPlaylist : NTYTModifierKindShorts));
+        NTYTModifierKind kind;
+        if (isVideo) kind = NTYTModifierKindVideo;
+        else if (isPost) kind = NTYTModifierKindPost;
+        else if (isPlaylist) kind = NTYTModifierKindPlaylist;
+        else if (isShorts) kind = NTYTModifierKindShorts;
+        else if (isUpcoming) kind = NTYTModifierKindUpcoming;
+        else kind = NTYTModifierKindCurrent;
         return [NTYTModifier predicateModifierWithKind:kind
                                               negative:modifierNegative];
     }

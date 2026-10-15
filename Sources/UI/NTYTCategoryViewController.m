@@ -46,7 +46,8 @@
                 _listIDs = @[@(NTYTListIDChannelsBlock), @(NTYTListIDChannelsAllow)];
                 break;
             case NTYTSettingsCategoryPagePosts:
-                _listIDs = @[@(NTYTListIDPostContent), @(NTYTListIDPostChannel)];
+                _listIDs = @[@(NTYTListIDPostContent), @(NTYTListIDPostChannel),
+                             @(NTYTListIDPostID)];
                 break;
             case NTYTSettingsCategoryPagePlaylists:
                 _listIDs = @[@(NTYTListIDPlaylistTitle),
@@ -149,7 +150,7 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     if (self.categoryPage == NTYTSettingsCategoryPageOption) {
-        return 6;
+        return 8;
     }
     NSInteger listSection = section;
     NTYTListDefinition *definition =
@@ -171,6 +172,7 @@
             @(NTYTBlockOptionIDShorts), @(NTYTBlockOptionIDPost),
             @(NTYTBlockOptionIDPlaylist), @(NTYTBlockOptionIDMix),
             @(NTYTBlockOptionIDHorizontalShelf), @(NTYTBlockOptionIDFromYouTube),
+            @(NTYTBlockOptionIDAdSupportedFreeMovie), @(NTYTBlockOptionIDCellDivider),
         ];
         NTYTBlockOptionID optionID = (NTYTBlockOptionID)optionIDs[indexPath.row].integerValue;
         [cell configureWithText:NTYTBlockOptionTitle(optionID)];

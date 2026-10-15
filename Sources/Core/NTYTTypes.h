@@ -16,6 +16,13 @@ typedef NS_ENUM(NSInteger, NTYTShortsClassification) {
     NTYTShortsClassificationNonShorts,
 };
 
+// Two independent values use this state domain; neither is the other's complement.
+typedef NS_ENUM(NSInteger, NTYTTemporalClassification) {
+    NTYTTemporalClassificationUnavailable = 0,
+    NTYTTemporalClassificationNotConfirmed,
+    NTYTTemporalClassificationConfirmed,
+};
+
 typedef NS_ENUM(NSInteger, NTYTMetadataValueState) {
     NTYTMetadataValueStateAvailable = 0,
     NTYTMetadataValueStateAbsent,
@@ -49,6 +56,7 @@ typedef NS_ENUM(NSInteger, NTYTListID) {
     NTYTListIDPlaylistID,
     NTYTListIDGlobalBlock,
     NTYTListIDGlobalAllow,
+    NTYTListIDPostID,
 };
 
 typedef NS_ENUM(NSInteger, NTYTListKind) {
@@ -64,6 +72,7 @@ typedef NS_ENUM(NSInteger, NTYTTargetKind) {
     NTYTTargetKindPostBody,
     NTYTTargetKindPlaylistID,
     NTYTTargetKindGlobal,
+    NTYTTargetKindPostID,
 };
 
 typedef NS_ENUM(NSInteger, NTYTListOptionID) {
@@ -78,6 +87,8 @@ typedef NS_ENUM(NSInteger, NTYTBlockOptionID) {
     NTYTBlockOptionIDMix,
     NTYTBlockOptionIDHorizontalShelf,
     NTYTBlockOptionIDFromYouTube,
+    NTYTBlockOptionIDAdSupportedFreeMovie,
+    NTYTBlockOptionIDCellDivider,
 };
 
 typedef NS_ENUM(NSInteger, NTYTOptionPhaseOutcome) {
@@ -98,6 +109,8 @@ typedef NS_ENUM(NSInteger, NTYTModifierKind) {
     NTYTModifierKindPost = 3,
     NTYTModifierKindPlaylist = 4,
     NTYTModifierKindShorts = 5,
+    NTYTModifierKindUpcoming = 6,
+    NTYTModifierKindCurrent = 7,
 };
 
 typedef NS_ENUM(NSInteger, NTYTSettingsLifecycleState) {
