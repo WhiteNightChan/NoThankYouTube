@@ -460,6 +460,7 @@ static NTYTChannelIdentityCollection *NTYTVideoChannelCollection(
 
 static NTYTContentMetadata *NTYTVideoMetadata(NSData *data,
                                               NTYTShortsClassification shortsClassification,
+                                              NTYTStationClassification stationClassification,
                                               NTYTTemporalClassification upcomingClassification,
                                               NTYTTemporalClassification currentClassification,
                                               NTYTPresentationQualification freeMovieQualification) {
@@ -473,6 +474,7 @@ static NTYTContentMetadata *NTYTVideoMetadata(NSData *data,
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypeVideo
        shortsClassification:shortsClassification
+      stationClassification:stationClassification
      upcomingClassification:upcomingClassification
       currentClassification:currentClassification
                     videoID:NTYTMetadataValueForString(videoID)
@@ -485,6 +487,7 @@ static NTYTContentMetadata *NTYTVideoMetadata(NSData *data,
 
 static NTYTContentMetadata *NTYTFromYouTubeVideoMetadata(NSData *data,
                                                          NTYTShortsClassification shortsClassification,
+                                                         NTYTStationClassification stationClassification,
                                                          NTYTTemporalClassification upcomingClassification,
                                                          NTYTTemporalClassification currentClassification) {
     NSString *videoIDA = NTYTExactlyOneMessageString(data, NTYTFromYouTubeVideoIDProviderAPath(), 1, YES);
@@ -501,6 +504,7 @@ static NTYTContentMetadata *NTYTFromYouTubeVideoMetadata(NSData *data,
         NTYTMetadataValueForString(sourceHandle ? NTYTSemanticHandleFromSourceString(sourceHandle) : nil));
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypeVideo shortsClassification:shortsClassification
+      stationClassification:stationClassification
      upcomingClassification:upcomingClassification
       currentClassification:currentClassification
                     videoID:NTYTMetadataValueForString(videoID)
@@ -587,7 +591,8 @@ static NSString *NTYTPostID(NSData *data) {
 }
 
 static NTYTContentMetadata *NTYTPostMetadata(NSData *data,
-                                             NTYTShortsClassification shortsClassification) {
+                                             NTYTShortsClassification shortsClassification,
+                                             NTYTStationClassification stationClassification) {
     NSString *channelName = NTYTPostField(data, @[@1, @1, @3, @1, @1], 3, NO);
     NSArray<NSNumber *> *channelSuffix =
         @[@1, @1, @3, @1, @1, @5, @169495254, @48687626];
@@ -604,6 +609,7 @@ static NTYTContentMetadata *NTYTPostMetadata(NSData *data,
     return [[NTYTContentMetadata alloc]
         initWithContentType:NTYTContentTypePost
        shortsClassification:shortsClassification
+      stationClassification:stationClassification
      upcomingClassification:NTYTTemporalClassificationNotConfirmed
       currentClassification:NTYTTemporalClassificationNotConfirmed
                     videoID:[NTYTMetadataValue unavailableValue]
@@ -639,7 +645,8 @@ static NSString *NTYTPlaylistID(NSData *data) {
 
 static NTYTContentMetadata *NTYTPlaylistMetadata(NSData *data,
                                                   NTYTContentType contentType,
-                                                  NTYTShortsClassification shortsClassification) {
+                                                  NTYTShortsClassification shortsClassification,
+                                                  NTYTStationClassification stationClassification) {
     NSString *title = NTYTExactlyOneMessageString(data,
                                                    NTYTPlaylistTitlePath(),
                                                    1,
@@ -661,6 +668,7 @@ static NTYTContentMetadata *NTYTPlaylistMetadata(NSData *data,
     return [[NTYTContentMetadata alloc]
         initWithContentType:contentType
        shortsClassification:shortsClassification
+      stationClassification:stationClassification
      upcomingClassification:NTYTTemporalClassificationNotConfirmed
       currentClassification:NTYTTemporalClassificationNotConfirmed
                     videoID:[NTYTMetadataValue unavailableValue]
@@ -731,10 +739,12 @@ static NTYTContentMetadata *NTYTPlaylistMetadata(NSData *data,
                 switch (qualification.videoCellVariant) {
                     case NTYTVideoCellVariantFromYouTube:
                         metadata = NTYTFromYouTubeVideoMetadata(data, qualification.semanticResult.shortsClassification,
+                                                             qualification.semanticResult.stationClassification,
                                                              upcoming, current);
                         break;
                     case NTYTVideoCellVariantStandard:
                         metadata = NTYTVideoMetadata(data, qualification.semanticResult.shortsClassification,
+                                                   qualification.semanticResult.stationClassification,
                                                    upcoming, current, qualification.semanticResult.adSupportedFreeMovie);
                         break;
                     default:
@@ -743,11 +753,13 @@ static NTYTContentMetadata *NTYTPlaylistMetadata(NSData *data,
                 break;
             }
             case NTYTContentTypePost:
-                metadata = NTYTPostMetadata(data, qualification.semanticResult.shortsClassification);
+                metadata = NTYTPostMetadata(data, qualification.semanticResult.shortsClassification,
+                                            qualification.semanticResult.stationClassification);
                 break;
             case NTYTContentTypePlaylistNormal:
             case NTYTContentTypePlaylistMix:
-                metadata = NTYTPlaylistMetadata(data, contentType, qualification.semanticResult.shortsClassification);
+                metadata = NTYTPlaylistMetadata(data, contentType, qualification.semanticResult.shortsClassification,
+                                                qualification.semanticResult.stationClassification);
                 break;
             case NTYTContentTypeUnresolved:
                 break;

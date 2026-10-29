@@ -35,6 +35,7 @@ typedef NS_ENUM(NSInteger, NTYTHorizontalShelfException) {
 @property(nonatomic, readonly) NTYTContentFamily contentFamily;
 @property(nonatomic, readonly) NTYTPlaylistSubtype playlistSubtype;
 @property(nonatomic, readonly) NTYTShortsClassification shortsClassification;
+@property(nonatomic, readonly) NTYTStationClassification stationClassification;
 @property(nonatomic, readonly) NTYTPresentationQualification horizontalShelf;
 @property(nonatomic, readonly) NTYTHorizontalShelfException horizontalShelfException;
 @property(nonatomic, readonly) NTYTPresentationQualification shortsShelf;
@@ -46,6 +47,7 @@ typedef NS_ENUM(NSInteger, NTYTHorizontalShelfException) {
 - (instancetype)initWithContentFamily:(NTYTContentFamily)contentFamily
                       playlistSubtype:(NTYTPlaylistSubtype)playlistSubtype
                  shortsClassification:(NTYTShortsClassification)shortsClassification
+                stationClassification:(NTYTStationClassification)stationClassification
                       horizontalShelf:(NTYTPresentationQualification)horizontalShelf
              horizontalShelfException:(NTYTHorizontalShelfException)horizontalShelfException
                           shortsShelf:(NTYTPresentationQualification)shortsShelf

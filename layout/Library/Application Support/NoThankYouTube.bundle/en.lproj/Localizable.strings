@@ -31,7 +31,8 @@
 "ui.block_option.horizontal_shelf" = "Block Horizontal Shelves";
 "ui.block_option.from_youtube" = "Block \"From YouTube\" Cell";
 "ui.block_option.ad_supported_free_movie" = "Block Ad-Supported Free Movies";
-"ui.block_option.cell_divider" = "Block Cell Dividers";
+"ui.block_option.station" = "Block Station";
+"ui.block_option.cell_divider" = "Block Cell Dividers (Not Recommended)";
 "ui.option.generic" = "Option";
 "ui.lifecycle.absent" = "Absent";
 "ui.lifecycle.supported_valid" = "Supported / Valid";

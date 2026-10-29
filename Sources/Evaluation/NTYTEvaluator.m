@@ -73,6 +73,8 @@
             qualification.playlistSubtype > NTYTPlaylistSubtypeMix ||
             qualification.shortsClassification < NTYTShortsClassificationUnavailable ||
             qualification.shortsClassification > NTYTShortsClassificationNonShorts ||
+            qualification.stationClassification < NTYTStationClassificationUnavailable ||
+            qualification.stationClassification > NTYTStationClassificationNonStation ||
             qualification.horizontalShelf < NTYTPresentationQualificationUnavailable ||
             qualification.horizontalShelf > NTYTPresentationQualificationConfirmed ||
             qualification.shortsShelf < NTYTPresentationQualificationUnavailable ||
@@ -94,6 +96,11 @@
              qualification.shortsClassification != NTYTShortsClassificationNonShorts) ||
             (qualification.contentFamily == NTYTContentFamilyUnresolved &&
              qualification.shortsClassification != NTYTShortsClassificationUnavailable) ||
+            ((qualification.contentFamily == NTYTContentFamilyPost ||
+              qualification.contentFamily == NTYTContentFamilyPlaylist) &&
+             qualification.stationClassification != NTYTStationClassificationNonStation) ||
+            (qualification.contentFamily == NTYTContentFamilyUnresolved &&
+             qualification.stationClassification != NTYTStationClassificationUnavailable) ||
             (qualification.fromYouTubeCell == NTYTPresentationQualificationConfirmed &&
              qualification.contentFamily == NTYTContentFamilyVideo &&
              qualification.shortsClassification != NTYTShortsClassificationUnavailable)) {
@@ -117,7 +124,8 @@
             (options.blockAdSupportedFreeMovie &&
              qualification.adSupportedFreeMovie == NTYTPresentationQualificationConfirmed) ||
             (options.blockCellDivider &&
-             qualification.cellDivider == NTYTPresentationQualificationConfirmed);
+             qualification.cellDivider == NTYTPresentationQualificationConfirmed) ||
+            (options.blockStation && qualification.stationClassification == NTYTStationClassificationStation);
         return block ? NTYTOptionPhaseOutcomeBlock : NTYTOptionPhaseOutcomeNoBlock;
     } @catch (__unused NSException *exception) {
         return NTYTOptionPhaseOutcomeInternalFailure;
@@ -448,6 +456,27 @@
             }
             break;
 
+        case NTYTModifierKindStation:
+            if (modifier.matcherExpression) {
+                *internalFailure = YES;
+                return NTYTMatchResultNoMatch;
+            }
+            switch (metadata.stationClassification) {
+                case NTYTStationClassificationStation:
+                    result = NTYTMatchResultMatch;
+                    break;
+                case NTYTStationClassificationNonStation:
+                    result = NTYTMatchResultNoMatch;
+                    break;
+                case NTYTStationClassificationUnavailable:
+                    result = NTYTMatchResultUnavailable;
+                    break;
+                default:
+                    *internalFailure = YES;
+                    return NTYTMatchResultNoMatch;
+            }
+            break;
+
         case NTYTModifierKindUpcoming:
         case NTYTModifierKindCurrent: {
             if (modifier.matcherExpression) {
@@ -517,6 +546,7 @@
         case NTYTModifierKindPost:
         case NTYTModifierKindPlaylist:
         case NTYTModifierKindShorts:
+        case NTYTModifierKindStation:
         case NTYTModifierKindUpcoming:
         case NTYTModifierKindCurrent:
             *internalFailure = YES;

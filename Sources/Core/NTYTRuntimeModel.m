@@ -89,6 +89,7 @@
                       kind == NTYTModifierKindPost ||
                       kind == NTYTModifierKindPlaylist ||
                       kind == NTYTModifierKindShorts ||
+                      kind == NTYTModifierKindStation ||
                       kind == NTYTModifierKindUpcoming ||
                       kind == NTYTModifierKindCurrent);
     return [[self alloc] initWithKind:kind

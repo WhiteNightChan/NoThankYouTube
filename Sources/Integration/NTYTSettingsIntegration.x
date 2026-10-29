@@ -240,7 +240,7 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
         return NO;
     }
 
-    NSArray *items = @[global, general, videos, channels, posts, playlists, options,
+    NSArray *items = @[global, channels, general, videos, posts, playlists, options,
                        importSettings, exportSettings];
 
     SEL modern = @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:);

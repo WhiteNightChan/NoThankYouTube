@@ -9,7 +9,8 @@
                blockHorizontalShelf:(BOOL)blockHorizontalShelf
                    blockFromYouTube:(BOOL)blockFromYouTube
           blockAdSupportedFreeMovie:(BOOL)blockAdSupportedFreeMovie
-                   blockCellDivider:(BOOL)blockCellDivider {
+                   blockCellDivider:(BOOL)blockCellDivider
+                       blockStation:(BOOL)blockStation {
     self = [super init];
     if (self) {
         _blockShorts = blockShorts;
@@ -20,6 +21,7 @@
         _blockFromYouTube = blockFromYouTube;
         _blockAdSupportedFreeMovie = blockAdSupportedFreeMovie;
         _blockCellDivider = blockCellDivider;
+        _blockStation = blockStation;
     }
     return self;
 }
@@ -34,6 +36,7 @@
         case NTYTBlockOptionIDFromYouTube: return self.blockFromYouTube;
         case NTYTBlockOptionIDAdSupportedFreeMovie: return self.blockAdSupportedFreeMovie;
         case NTYTBlockOptionIDCellDivider: return self.blockCellDivider;
+        case NTYTBlockOptionIDStation: return self.blockStation;
     }
     NSAssert(NO, @"Invalid BlockOptionID");
     return NO;
@@ -45,7 +48,7 @@
     dispatch_once(&onceToken, ^{
         options = [[self alloc] initWithBlockShorts:NO blockPost:NO blockPlaylist:NO
                                          blockMix:NO blockHorizontalShelf:NO blockFromYouTube:NO
-                         blockAdSupportedFreeMovie:NO blockCellDivider:NO];
+                         blockAdSupportedFreeMovie:NO blockCellDivider:NO blockStation:NO];
     });
     return options;
 }

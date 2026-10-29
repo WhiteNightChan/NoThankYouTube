@@ -5,6 +5,7 @@
 - (instancetype)initWithContentFamily:(NTYTContentFamily)contentFamily
                       playlistSubtype:(NTYTPlaylistSubtype)playlistSubtype
                  shortsClassification:(NTYTShortsClassification)shortsClassification
+                stationClassification:(NTYTStationClassification)stationClassification
                       horizontalShelf:(NTYTPresentationQualification)horizontalShelf
              horizontalShelfException:(NTYTHorizontalShelfException)horizontalShelfException
                           shortsShelf:(NTYTPresentationQualification)shortsShelf
@@ -16,6 +17,7 @@
         _contentFamily = contentFamily;
         _playlistSubtype = playlistSubtype;
         _shortsClassification = shortsClassification;
+        _stationClassification = stationClassification;
         _horizontalShelf = horizontalShelf;
         _horizontalShelfException = horizontalShelfException;
         _shortsShelf = shortsShelf;

@@ -193,7 +193,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
             NSSet<NSString *> *known = [NSSet setWithArray:@[
                 @"blockShorts", @"blockPost", @"blockPlaylist", @"blockMix",
                 @"blockHorizontalShelf", @"blockFromYouTube",
-                @"blockAdSupportedFreeMovie", @"blockCellDivider",
+                @"blockAdSupportedFreeMovie", @"blockCellDivider", @"blockStation",
             ]];
             NSDictionary *options = (NSDictionary *)blockOptionsObject;
             for (id key in options) {
@@ -215,7 +215,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
       blockHorizontalShelf:[validBlockValues[@"blockHorizontalShelf"] boolValue]
           blockFromYouTube:[validBlockValues[@"blockFromYouTube"] boolValue]
  blockAdSupportedFreeMovie:[validBlockValues[@"blockAdSupportedFreeMovie"] boolValue]
-          blockCellDivider:[validBlockValues[@"blockCellDivider"] boolValue]];
+          blockCellDivider:[validBlockValues[@"blockCellDivider"] boolValue]
+              blockStation:[validBlockValues[@"blockStation"] boolValue]];
 
     NSMutableDictionary<NSNumber *, NTYTRawList *> *rawLists = [NSMutableDictionary dictionary];
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
@@ -460,6 +461,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     if (state.blockFromYouTube) options[@"blockFromYouTube"] = @YES;
     if (state.blockAdSupportedFreeMovie) options[@"blockAdSupportedFreeMovie"] = @YES;
     if (state.blockCellDivider) options[@"blockCellDivider"] = @YES;
+    if (state.blockStation) options[@"blockStation"] = @YES;
     if (options.count > 0) root[@"options"] = options;
     return root;
 }

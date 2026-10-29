@@ -150,7 +150,7 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     if (self.categoryPage == NTYTSettingsCategoryPageOption) {
-        return 8;
+        return 9;
     }
     NSInteger listSection = section;
     NTYTListDefinition *definition =
@@ -169,10 +169,10 @@
 
     if (self.categoryPage == NTYTSettingsCategoryPageOption) {
         NSArray<NSNumber *> *optionIDs = @[
-            @(NTYTBlockOptionIDShorts), @(NTYTBlockOptionIDPost),
-            @(NTYTBlockOptionIDPlaylist), @(NTYTBlockOptionIDMix),
-            @(NTYTBlockOptionIDHorizontalShelf), @(NTYTBlockOptionIDFromYouTube),
-            @(NTYTBlockOptionIDAdSupportedFreeMovie), @(NTYTBlockOptionIDCellDivider),
+            @(NTYTBlockOptionIDShorts), @(NTYTBlockOptionIDFromYouTube),
+            @(NTYTBlockOptionIDAdSupportedFreeMovie), @(NTYTBlockOptionIDStation),
+            @(NTYTBlockOptionIDPost), @(NTYTBlockOptionIDPlaylist), @(NTYTBlockOptionIDMix),
+            @(NTYTBlockOptionIDHorizontalShelf), @(NTYTBlockOptionIDCellDivider),
         ];
         NTYTBlockOptionID optionID = (NTYTBlockOptionID)optionIDs[indexPath.row].integerValue;
         [cell configureWithText:NTYTBlockOptionTitle(optionID)];

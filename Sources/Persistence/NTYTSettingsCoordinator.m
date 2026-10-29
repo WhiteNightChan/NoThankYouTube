@@ -264,7 +264,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 - (BOOL)effectiveValueForBlockOption:(NTYTBlockOptionID)optionID {
     __block BOOL value = NO;
     [self performSynchronous:^{
-        if (optionID < NTYTBlockOptionIDShorts || optionID > NTYTBlockOptionIDCellDivider) return;
+        if (optionID < NTYTBlockOptionIDShorts || optionID > NTYTBlockOptionIDStation) return;
         value = [self.committedSettings.blockOptions valueForOption:optionID];
     }];
     return value;
@@ -531,7 +531,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                                         underlyingError:nil];
             return;
         }
-        if (optionID < NTYTBlockOptionIDShorts || optionID > NTYTBlockOptionIDCellDivider) {
+        if (optionID < NTYTBlockOptionIDShorts || optionID > NTYTBlockOptionIDStation) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
                                                  reason:NTYTMutationFailureReasonUnsupportedOption
                                         underlyingError:nil];
@@ -610,7 +610,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
         aOptions.blockHorizontalShelf != bOptions.blockHorizontalShelf ||
         aOptions.blockFromYouTube != bOptions.blockFromYouTube ||
         aOptions.blockAdSupportedFreeMovie != bOptions.blockAdSupportedFreeMovie ||
-        aOptions.blockCellDivider != bOptions.blockCellDivider) {
+        aOptions.blockCellDivider != bOptions.blockCellDivider ||
+        aOptions.blockStation != bOptions.blockStation) {
         return NO;
     }
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
@@ -703,7 +704,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
       blockHorizontalShelf:optionID == NTYTBlockOptionIDHorizontalShelf ? value : current.blockHorizontalShelf
           blockFromYouTube:optionID == NTYTBlockOptionIDFromYouTube ? value : current.blockFromYouTube
  blockAdSupportedFreeMovie:optionID == NTYTBlockOptionIDAdSupportedFreeMovie ? value : current.blockAdSupportedFreeMovie
-          blockCellDivider:optionID == NTYTBlockOptionIDCellDivider ? value : current.blockCellDivider];
+          blockCellDivider:optionID == NTYTBlockOptionIDCellDivider ? value : current.blockCellDivider
+              blockStation:optionID == NTYTBlockOptionIDStation ? value : current.blockStation];
     return [[NTYTStoredSettings alloc] initWithLists:self.committedSettings.lists
                                       blockOptions:options];
 }

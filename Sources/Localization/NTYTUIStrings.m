@@ -87,6 +87,7 @@ NSString *NTYTBlockOptionTitle(NTYTBlockOptionID optionID) {
         case NTYTBlockOptionIDFromYouTube: return NTYTLocalizedString(@"ui.block_option.from_youtube");
         case NTYTBlockOptionIDAdSupportedFreeMovie: return NTYTLocalizedString(@"ui.block_option.ad_supported_free_movie");
         case NTYTBlockOptionIDCellDivider: return NTYTLocalizedString(@"ui.block_option.cell_divider");
+        case NTYTBlockOptionIDStation: return NTYTLocalizedString(@"ui.block_option.station");
     }
     return NTYTLocalizedString(@"ui.category.option");
 }

@@ -34,8 +34,8 @@
 
 @end
 
-static NSArray<NSNumber *> *NTYTPlaylistFamilyParentPath(void) {
-    return @[@1, @168777401, @5, @232954548, @18];
+static NSArray<NSNumber *> *NTYTPlaylistFamilyPath(void) {
+    return @[@1, @168777401, @5, @232954548, @18, @24];
 }
 
 static NSArray<NSNumber *> *NTYTPlaylistSubtypePath(void) {
@@ -65,11 +65,51 @@ static NTYTPlaylistSubtype NTYTQualifiedPlaylistSubtype(NSData *data) {
     return normal ? NTYTPlaylistSubtypeNormal : NTYTPlaylistSubtypeMix;
 }
 
-static BOOL NTYTPlaylistFamilyPositive(NSData *data) {
-    if (!data) return NO;
-    NSArray<NSData *> *messages =
-        [NTYTProtobufReader messagesAtPath:NTYTPlaylistFamilyParentPath() inData:data error:nil];
-    return messages.count == 1 && NTYTExactlyOneVarintEquals(messages.firstObject, 38, 1);
+typedef NS_ENUM(NSInteger, NTYTPlaylistFamilyEvaluation) {
+    NTYTPlaylistFamilyEvaluationFailure = 0,
+    NTYTPlaylistFamilyEvaluationSafeNotPositive,
+    NTYTPlaylistFamilyEvaluationPositive,
+};
+
+static NTYTPlaylistFamilyEvaluation NTYTEvaluatePlaylistFamily(NSData *data) {
+    if (!data) return NTYTPlaylistFamilyEvaluationFailure;
+    @try {
+        NSArray<NSData *> *messages =
+            [NTYTProtobufReader messagesAtPath:NTYTPlaylistFamilyPath() inData:data error:nil];
+        if (!messages) return NTYTPlaylistFamilyEvaluationFailure;
+        BOOL foundPositive = NO;
+        for (NSData *message in messages) {
+            NSArray<NSNumber *> *values =
+                [NTYTProtobufReader varintValuesForField:2 inData:message error:nil];
+            if (!values) return NTYTPlaylistFamilyEvaluationFailure;
+            if ([values containsObject:@6178] || [values containsObject:@6179]) foundPositive = YES;
+        }
+        return foundPositive ? NTYTPlaylistFamilyEvaluationPositive
+                             : NTYTPlaylistFamilyEvaluationSafeNotPositive;
+    } @catch (__unused NSException *exception) {
+        return NTYTPlaylistFamilyEvaluationFailure;
+    }
+}
+
+static NTYTStationClassification NTYTVideoStationClassification(NSData *data) {
+    if (!data) return NTYTStationClassificationUnavailable;
+    @try {
+        NSArray<NSData *> *messages = [NTYTProtobufReader
+            messagesAtPath:@[@1, @168777401, @5, @232954548, @18, @1, @1]
+                   inData:data error:nil];
+        if (!messages) return NTYTStationClassificationUnavailable;
+        BOOL foundStation = NO;
+        for (NSData *message in messages) {
+            NSArray<NSData *> *values =
+                [NTYTProtobufReader lengthDelimitedValuesForField:56 inData:message error:nil];
+            if (!values) return NTYTStationClassificationUnavailable;
+            // Direct wire2 presence only; the nested payload is not a qualification gate.
+            if (values.count > 0) foundStation = YES;
+        }
+        return foundStation ? NTYTStationClassificationStation : NTYTStationClassificationNonStation;
+    } @catch (__unused NSException *exception) {
+        return NTYTStationClassificationUnavailable;
+    }
 }
 
 // Complete traversal and leaf validation precede a presentation positive.
@@ -208,6 +248,7 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
     return [[NTYTSemanticQualificationResult alloc]
         initWithContentFamily:NTYTContentFamilyUnresolved playlistSubtype:NTYTPlaylistSubtypeUnresolved
          shortsClassification:NTYTShortsClassificationUnavailable
+        stationClassification:NTYTStationClassificationUnavailable
               horizontalShelf:NTYTPresentationQualificationUnavailable
      horizontalShelfException:NTYTHorizontalShelfExceptionUnavailable
                   shortsShelf:state fromYouTubeCell:NTYTPresentationQualificationUnavailable
@@ -247,6 +288,7 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
     NTYTContentFamily family = NTYTContentFamilyUnresolved;
     NTYTPlaylistSubtype subtype = NTYTPlaylistSubtypeUnresolved;
     NTYTShortsClassification shorts = NTYTShortsClassificationUnavailable;
+    NTYTStationClassification station = NTYTStationClassificationUnavailable;
     NTYTPresentationQualification fromYouTube = NTYTPresentationQualificationUnavailable;
     NTYTPresentationQualification shortsShelf = NTYTPresentationQualificationUnavailable;
     NTYTPresentationQualification freeMovie = NTYTPresentationQualificationUnavailable;
@@ -273,9 +315,10 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
             NTYTSafeMessages(data, @[@1, @168777401, @5, @347043917]));
         BOOL video = standardVideo || fromYouTubeVideo ||
                      freeMovie == NTYTPresentationQualificationConfirmed;
-        BOOL playlist = NTYTPlaylistFamilyPositive(data);
+        NTYTPlaylistFamilyEvaluation playlistEvaluation = NTYTEvaluatePlaylistFamily(data);
+        BOOL playlist = playlistEvaluation == NTYTPlaylistFamilyEvaluationPositive;
         NSUInteger positiveFamilies = (video ? 1 : 0) + (post ? 1 : 0) + (playlist ? 1 : 0);
-        if (positiveFamilies == 1) {
+        if (playlistEvaluation != NTYTPlaylistFamilyEvaluationFailure && positiveFamilies == 1) {
             if (video) {
                 family = NTYTContentFamilyVideo;
                 if (fromYouTubeVideo) {
@@ -285,13 +328,16 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
                 } else {
                     shorts = NTYTVideoShortsClassification(data);
                 }
+                station = NTYTVideoStationClassification(data);
             } else if (post) {
                 family = NTYTContentFamilyPost;
                 shorts = NTYTShortsClassificationNonShorts;
+                station = NTYTStationClassificationNonStation;
             } else {
                 family = NTYTContentFamilyPlaylist;
                 subtype = NTYTQualifiedPlaylistSubtype(data);
                 shorts = NTYTShortsClassificationNonShorts;
+                station = NTYTStationClassificationNonStation;
             }
         }
         shortsShelf = NTYTPresentationForMessages(NTYTSafeMessages(data, @[@1, @168777401, @5, @315733268]));
@@ -299,6 +345,7 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
 
     NTYTSemanticQualificationResult *semantic = [[NTYTSemanticQualificationResult alloc]
         initWithContentFamily:family playlistSubtype:subtype shortsClassification:shorts
+        stationClassification:station
               horizontalShelf:horizontal horizontalShelfException:horizontalException
                   shortsShelf:shortsShelf fromYouTubeCell:fromYouTube
              adSupportedFreeMovie:freeMovie cellDivider:cellDivider];

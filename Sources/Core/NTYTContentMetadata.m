@@ -117,6 +117,7 @@
 
 - (instancetype)initWithContentType:(NTYTContentType)contentType
                shortsClassification:(NTYTShortsClassification)shortsClassification
+              stationClassification:(NTYTStationClassification)stationClassification
              upcomingClassification:(NTYTTemporalClassification)upcomingClassification
               currentClassification:(NTYTTemporalClassification)currentClassification
                              videoID:(NTYTMetadataValue *)videoID
@@ -131,6 +132,9 @@
         NSParameterAssert(shortsClassification == NTYTShortsClassificationShorts ||
                           shortsClassification == NTYTShortsClassificationNonShorts ||
                           shortsClassification == NTYTShortsClassificationUnavailable);
+        NSParameterAssert(stationClassification == NTYTStationClassificationStation ||
+                          stationClassification == NTYTStationClassificationNonStation ||
+                          stationClassification == NTYTStationClassificationUnavailable);
         NSParameterAssert(upcomingClassification == NTYTTemporalClassificationConfirmed ||
                           upcomingClassification == NTYTTemporalClassificationNotConfirmed ||
                           upcomingClassification == NTYTTemporalClassificationUnavailable);
@@ -141,6 +145,7 @@
                           channelIdentityCollection);
         _contentType = contentType;
         _shortsClassification = shortsClassification;
+        _stationClassification = stationClassification;
         _upcomingClassification = upcomingClassification;
         _currentClassification = currentClassification;
         _videoID = videoID;

@@ -72,12 +72,13 @@ static NSString *NTYTChannelCollectionLogValue(NTYTChannelIdentityCollection *co
     NTYTOptionPhaseOutcome outcome = [NTYTEvaluator
         optionOutcomeForQualification:semanticResult snapshot:snapshot];
 
-    NTYTLog(@"[FilterQual] child=%lu standaloneHorizontalOnly=%@ family=%ld playlistSubtype=%ld shortsClassification=%ld horizontalShelf=%ld horizontalShelfException=%ld shortsShelf=%ld fromYouTubeCell=%ld adSupportedFreeMovie=%ld cellDivider=%ld projectedType=%ld optionOutcome=%ld",
+    NTYTLog(@"[FilterQual] child=%lu standaloneHorizontalOnly=%@ family=%ld playlistSubtype=%ld shortsClassification=%ld stationClassification=%ld horizontalShelf=%ld horizontalShelfException=%ld shortsShelf=%ld fromYouTubeCell=%ld adSupportedFreeMovie=%ld cellDivider=%ld projectedType=%ld optionOutcome=%ld",
             (unsigned long)childIndex,
             standaloneOnly ? @"YES" : @"NO",
             (long)semanticResult.contentFamily,
             (long)semanticResult.playlistSubtype,
             (long)semanticResult.shortsClassification,
+            (long)semanticResult.stationClassification,
             (long)semanticResult.horizontalShelf,
             (long)semanticResult.horizontalShelfException,
             (long)semanticResult.shortsShelf,
@@ -108,10 +109,11 @@ static NSString *NTYTChannelCollectionLogValue(NTYTChannelIdentityCollection *co
     }
     NTYTContentMetadata *metadata = extraction.metadata;
     NTYTDecision decision = [NTYTEvaluator decisionForMetadata:metadata snapshot:snapshot];
-    NTYTLog(@"[Filter] child=%lu type=%ld shortsClassification=%ld upcomingClassification=%ld currentClassification=%ld videoID=%@ title=%@ postBody=%@ postID=%@ playlistID=%@ channels=[%@] decision=%ld",
+    NTYTLog(@"[Filter] child=%lu type=%ld shortsClassification=%ld stationClassification=%ld upcomingClassification=%ld currentClassification=%ld videoID=%@ title=%@ postBody=%@ postID=%@ playlistID=%@ channels=[%@] decision=%ld",
             (unsigned long)childIndex,
             (long)metadata.contentType,
             (long)metadata.shortsClassification,
+            (long)metadata.stationClassification,
             (long)metadata.upcomingClassification,
             (long)metadata.currentClassification,
             NTYTMetadataLogValue(metadata.videoID),

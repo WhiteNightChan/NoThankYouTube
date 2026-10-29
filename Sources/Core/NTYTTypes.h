@@ -16,6 +16,12 @@ typedef NS_ENUM(NSInteger, NTYTShortsClassification) {
     NTYTShortsClassificationNonShorts,
 };
 
+typedef NS_ENUM(NSInteger, NTYTStationClassification) {
+    NTYTStationClassificationUnavailable = 0,
+    NTYTStationClassificationStation,
+    NTYTStationClassificationNonStation,
+};
+
 // Two independent values use this state domain; neither is the other's complement.
 typedef NS_ENUM(NSInteger, NTYTTemporalClassification) {
     NTYTTemporalClassificationUnavailable = 0,
@@ -89,6 +95,7 @@ typedef NS_ENUM(NSInteger, NTYTBlockOptionID) {
     NTYTBlockOptionIDFromYouTube,
     NTYTBlockOptionIDAdSupportedFreeMovie,
     NTYTBlockOptionIDCellDivider,
+    NTYTBlockOptionIDStation,
 };
 
 typedef NS_ENUM(NSInteger, NTYTOptionPhaseOutcome) {
@@ -111,6 +118,7 @@ typedef NS_ENUM(NSInteger, NTYTModifierKind) {
     NTYTModifierKindShorts = 5,
     NTYTModifierKindUpcoming = 6,
     NTYTModifierKindCurrent = 7,
+    NTYTModifierKindStation = 8,
 };
 
 typedef NS_ENUM(NSInteger, NTYTSettingsLifecycleState) {
