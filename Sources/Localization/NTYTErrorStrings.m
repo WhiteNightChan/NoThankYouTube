@@ -62,7 +62,7 @@ NSString *NTYTMutationErrorText(NTYTMutationResult *result) {
         case NTYTMutationFailureReasonRuleNotFound: return NTYTLocalizedString(@"error.mutation.rule_not_found");
         case NTYTMutationFailureReasonSelectedRuleMissing: return NTYTLocalizedString(@"error.mutation.selected_rule_missing");
         case NTYTMutationFailureReasonInvalidList: return NTYTLocalizedString(@"error.mutation.invalid_list");
-        case NTYTMutationFailureReasonNoRulesSelected: return NTYTLocalizedString(@"error.mutation.no_rules_selected");
+        case NTYTMutationFailureReasonNoRuleSelected: return NTYTLocalizedString(@"error.mutation.no_rule_selected");
         case NTYTMutationFailureReasonDuplicateRuleIdentifiers: return NTYTLocalizedString(@"error.mutation.duplicate_rule_identifiers");
         case NTYTMutationFailureReasonInvalidDestinationPosition: return NTYTLocalizedString(@"error.mutation.invalid_destination_position");
         case NTYTMutationFailureReasonUnsupportedOption: return NTYTLocalizedString(@"error.mutation.unsupported_option");

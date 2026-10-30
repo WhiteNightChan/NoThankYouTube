@@ -11,22 +11,22 @@ typedef NS_ENUM(NSInteger, NTYTContentType) {
 };
 
 typedef NS_ENUM(NSInteger, NTYTShortsClassification) {
-    NTYTShortsClassificationUnavailable = 0,
-    NTYTShortsClassificationShorts,
-    NTYTShortsClassificationNonShorts,
+    NTYTShortsClassificationNonShorts = 0,
+    NTYTShortsClassificationShorts = 1,
+    NTYTShortsClassificationUnavailable = 2,
 };
 
 typedef NS_ENUM(NSInteger, NTYTStationClassification) {
-    NTYTStationClassificationUnavailable = 0,
-    NTYTStationClassificationStation,
-    NTYTStationClassificationNonStation,
+    NTYTStationClassificationNonStation = 0,
+    NTYTStationClassificationStation = 1,
+    NTYTStationClassificationUnavailable = 2,
 };
 
 // Two independent values use this state domain; neither is the other's complement.
 typedef NS_ENUM(NSInteger, NTYTTemporalClassification) {
-    NTYTTemporalClassificationUnavailable = 0,
-    NTYTTemporalClassificationNotConfirmed,
-    NTYTTemporalClassificationConfirmed,
+    NTYTTemporalClassificationNotConfirmed = 0,
+    NTYTTemporalClassificationConfirmed = 1,
+    NTYTTemporalClassificationUnavailable = 2,
 };
 
 typedef NS_ENUM(NSInteger, NTYTMetadataValueState) {
@@ -50,11 +50,11 @@ typedef NS_ENUM(NSInteger, NTYTDecision) {
 typedef NS_ENUM(NSInteger, NTYTListID) {
     NTYTListIDGeneralBlock = 0,
     NTYTListIDGeneralAllow,
-    NTYTListIDVideosTitle,
-    NTYTListIDVideosChannel,
-    NTYTListIDVideosID,
-    NTYTListIDChannelsBlock,
-    NTYTListIDChannelsAllow,
+    NTYTListIDVideoTitle,
+    NTYTListIDVideoChannel,
+    NTYTListIDVideoID,
+    NTYTListIDChannelBlock,
+    NTYTListIDChannelAllow,
     NTYTListIDPostContent,
     NTYTListIDPostChannel,
     NTYTListIDPlaylistTitle,
@@ -100,8 +100,8 @@ typedef NS_ENUM(NSInteger, NTYTBlockOptionID) {
 
 typedef NS_ENUM(NSInteger, NTYTOptionPhaseOutcome) {
     NTYTOptionPhaseOutcomeNoBlock = 0,
-    NTYTOptionPhaseOutcomeBlock,
-    NTYTOptionPhaseOutcomeInternalFailure,
+    NTYTOptionPhaseOutcomeBlock = 1,
+    NTYTOptionPhaseOutcomeInternalFailure = 2,
 };
 
 typedef NS_ENUM(NSInteger, NTYTMatcherKind) {
@@ -147,7 +147,7 @@ typedef NS_ENUM(NSInteger, NTYTMutationFailureReason) {
     NTYTMutationFailureReasonRuleNotFound,
     NTYTMutationFailureReasonSelectedRuleMissing,
     NTYTMutationFailureReasonInvalidList,
-    NTYTMutationFailureReasonNoRulesSelected,
+    NTYTMutationFailureReasonNoRuleSelected,
     NTYTMutationFailureReasonDuplicateRuleIdentifiers,
     NTYTMutationFailureReasonInvalidDestinationPosition,
     NTYTMutationFailureReasonUnsupportedOption,

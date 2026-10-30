@@ -1,7 +1,7 @@
 #import <Foundation/Foundation.h>
 
 #import "Core/NTYTTypes.h"
-#import "Core/NTYTBlockOptions.h"
+#import "Core/NTYTBlockOptionState.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -19,21 +19,21 @@ NS_ASSUME_NONNULL_BEGIN
 @interface NTYTStoredList : NSObject
 
 @property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NSNumber *> *optionOverrides;
-@property(nonatomic, copy, readonly) NSArray<NTYTStoredRule *> *rules;
+@property(nonatomic, copy, readonly) NSArray<NTYTStoredRule *> *ruleSequence;
 
 - (instancetype)initWithOptionOverrides:(NSDictionary<NSNumber *, NSNumber *> *)optionOverrides
-                                   rules:(NSArray<NTYTStoredRule *> *)rules NS_DESIGNATED_INITIALIZER;
+                                   ruleSequence:(NSArray<NTYTStoredRule *> *)ruleSequence NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
 
 @interface NTYTStoredSettings : NSObject
 
-@property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTStoredList *> *lists;
-@property(nonatomic, strong, readonly) NTYTBlockOptions *blockOptions;
+@property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTStoredList *> *listStateMap;
+@property(nonatomic, strong, readonly) NTYTBlockOptionState *blockOptionState;
 
-- (instancetype)initWithLists:(NSDictionary<NSNumber *, NTYTStoredList *> *)lists
-                       blockOptions:(NTYTBlockOptions *)blockOptions NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithListStateMap:(NSDictionary<NSNumber *, NTYTStoredList *> *)listStateMap
+                       blockOptionState:(NTYTBlockOptionState *)blockOptionState NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 - (NTYTStoredList *)listForID:(NTYTListID)listID;
 + (instancetype)emptySettings;
@@ -66,13 +66,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property(nonatomic, readonly, getter=isAbsent) BOOL absent;
 @property(nonatomic, readonly) BOOL baseDegraded;
-@property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTRawList *> *lists;
-@property(nonatomic, strong, readonly) NTYTBlockOptions *blockOptions;
+@property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTRawList *> *listStateMap;
+@property(nonatomic, strong, readonly) NTYTBlockOptionState *blockOptionState;
 
 - (instancetype)initWithAbsent:(BOOL)absent
                   baseDegraded:(BOOL)baseDegraded
-                         lists:(NSDictionary<NSNumber *, NTYTRawList *> *)lists
-                       blockOptions:(NTYTBlockOptions *)blockOptions NS_DESIGNATED_INITIALIZER;
+                         listStateMap:(NSDictionary<NSNumber *, NTYTRawList *> *)listStateMap
+                       blockOptionState:(NTYTBlockOptionState *)blockOptionState NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end

@@ -5,7 +5,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 // Complete effective state. Sparse persistence is resolved before this model is built.
-@interface NTYTBlockOptions : NSObject
+@interface NTYTBlockOptionState : NSObject
 
 @property(nonatomic, readonly) BOOL blockShorts;
 @property(nonatomic, readonly) BOOL blockPost;
@@ -28,7 +28,7 @@ NS_ASSUME_NONNULL_BEGIN
                        blockStation:(BOOL)blockStation NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 - (BOOL)valueForOption:(NTYTBlockOptionID)optionID;
-+ (instancetype)allOffOptions;
++ (instancetype)allOffState;
 
 @end
 

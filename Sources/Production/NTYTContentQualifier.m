@@ -66,9 +66,9 @@ static NTYTPlaylistSubtype NTYTQualifiedPlaylistSubtype(NSData *data) {
 }
 
 typedef NS_ENUM(NSInteger, NTYTPlaylistFamilyEvaluation) {
-    NTYTPlaylistFamilyEvaluationFailure = 0,
-    NTYTPlaylistFamilyEvaluationSafeNotPositive,
-    NTYTPlaylistFamilyEvaluationPositive,
+    NTYTPlaylistFamilyEvaluationSafeNotPositive = 0,
+    NTYTPlaylistFamilyEvaluationPositive = 1,
+    NTYTPlaylistFamilyEvaluationFailure = 2,
 };
 
 static NTYTPlaylistFamilyEvaluation NTYTEvaluatePlaylistFamily(NSData *data) {

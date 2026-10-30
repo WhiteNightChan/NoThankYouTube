@@ -15,10 +15,10 @@
 }
 
 - (NSArray<NTYTRuleListItem *> *)loadItems {
-    NSArray<NTYTStoredRule *> *rules =
-        [[NTYTSettingsCoordinator sharedCoordinator] rulesForListID:self.listID];
-    NSMutableArray<NTYTRuleListItem *> *items = [NSMutableArray arrayWithCapacity:rules.count];
-    for (NTYTStoredRule *rule in rules) {
+    NSArray<NTYTStoredRule *> *ruleSequence =
+        [[NTYTSettingsCoordinator sharedCoordinator] ruleSequenceForListID:self.listID];
+    NSMutableArray<NTYTRuleListItem *> *items = [NSMutableArray arrayWithCapacity:ruleSequence.count];
+    for (NTYTStoredRule *rule in ruleSequence) {
         [items addObject:[[NTYTRuleListItem alloc] initWithIdentifier:rule.identifier
                                                                 text:rule.expression]];
     }

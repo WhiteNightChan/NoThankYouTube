@@ -37,19 +37,19 @@
             case NTYTSettingsCategoryPageGeneral:
                 _listIDs = @[@(NTYTListIDGeneralBlock), @(NTYTListIDGeneralAllow)];
                 break;
-            case NTYTSettingsCategoryPageVideos:
-                _listIDs = @[@(NTYTListIDVideosTitle),
-                             @(NTYTListIDVideosChannel),
-                             @(NTYTListIDVideosID)];
+            case NTYTSettingsCategoryPageVideo:
+                _listIDs = @[@(NTYTListIDVideoTitle),
+                             @(NTYTListIDVideoChannel),
+                             @(NTYTListIDVideoID)];
                 break;
-            case NTYTSettingsCategoryPageChannels:
-                _listIDs = @[@(NTYTListIDChannelsBlock), @(NTYTListIDChannelsAllow)];
+            case NTYTSettingsCategoryPageChannel:
+                _listIDs = @[@(NTYTListIDChannelBlock), @(NTYTListIDChannelAllow)];
                 break;
-            case NTYTSettingsCategoryPagePosts:
+            case NTYTSettingsCategoryPagePost:
                 _listIDs = @[@(NTYTListIDPostContent), @(NTYTListIDPostChannel),
                              @(NTYTListIDPostID)];
                 break;
-            case NTYTSettingsCategoryPagePlaylists:
+            case NTYTSettingsCategoryPagePlaylist:
                 _listIDs = @[@(NTYTListIDPlaylistTitle),
                              @(NTYTListIDPlaylistChannel),
                              @(NTYTListIDPlaylistID)];
@@ -155,7 +155,7 @@
     NSInteger listSection = section;
     NTYTListDefinition *definition =
         [NTYTListDefinition definitionForListID:(NTYTListID)self.listIDs[listSection].integerValue];
-    return 1 + definition.supportedOptions.count;
+    return 1 + definition.supportedOptionIDs.count;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView
@@ -197,13 +197,13 @@
         return cell;
     }
 
-    NSArray<NSNumber *> *orderedOptions = @[
+    NSArray<NSNumber *> *orderedOptionIDs = @[
         @(NTYTListOptionIDCaseSensitive),
         @(NTYTListOptionIDExactMatch),
     ];
     NSMutableArray<NSNumber *> *supported = [NSMutableArray array];
-    for (NSNumber *option in orderedOptions) {
-        if ([definition.supportedOptions containsObject:option]) {
+    for (NSNumber *option in orderedOptionIDs) {
+        if ([definition.supportedOptionIDs containsObject:option]) {
             [supported addObject:option];
         }
     }

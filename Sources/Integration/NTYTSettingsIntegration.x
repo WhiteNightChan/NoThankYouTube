@@ -213,23 +213,23 @@ static id NTYTSettingsViewControllerCandidate(id manager, id entry) {
 
 static BOOL NTYTInstallSettingsSection(id manager, id entry) {
     id general = NTYTSectionItemForPage(NTYTSettingsCategoryPageGeneral);
-    id videos = NTYTSectionItemForPage(NTYTSettingsCategoryPageVideos);
-    id channels = NTYTSectionItemForPage(NTYTSettingsCategoryPageChannels);
-    id posts = NTYTSectionItemForPage(NTYTSettingsCategoryPagePosts);
-    id playlists = NTYTSectionItemForPage(NTYTSettingsCategoryPagePlaylists);
+    id videoItem = NTYTSectionItemForPage(NTYTSettingsCategoryPageVideo);
+    id channelItem = NTYTSectionItemForPage(NTYTSettingsCategoryPageChannel);
+    id postItem = NTYTSectionItemForPage(NTYTSettingsCategoryPagePost);
+    id playlistItem = NTYTSectionItemForPage(NTYTSettingsCategoryPagePlaylist);
     id global = NTYTSectionItemForPage(NTYTSettingsCategoryPageGlobal);
-    id options = NTYTSectionItemForPage(NTYTSettingsCategoryPageOption);
+    id optionItem = NTYTSectionItemForPage(NTYTSettingsCategoryPageOption);
     id importSettings = NTYTSectionItemForTransferAction(YES);
     id exportSettings = NTYTSectionItemForTransferAction(NO);
 
-    if (!general || !videos || !channels || !posts || !playlists || !global || !options ||
+    if (!general || !videoItem || !channelItem || !postItem || !playlistItem || !global || !optionItem ||
         !importSettings || !exportSettings) {
         NTYTLog(@"[SettingsIntegration] install failed: section items general=%@ videos=%@ channels=%@ posts=%@ playlists=%@ global=%@",
                 general ? @"OK" : @"nil",
-                videos ? @"OK" : @"nil",
-                channels ? @"OK" : @"nil",
-                posts ? @"OK" : @"nil",
-                playlists ? @"OK" : @"nil",
+                videoItem ? @"OK" : @"nil",
+                channelItem ? @"OK" : @"nil",
+                postItem ? @"OK" : @"nil",
+                playlistItem ? @"OK" : @"nil",
                 global ? @"OK" : @"nil");
         return NO;
     }
@@ -240,7 +240,7 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
         return NO;
     }
 
-    NSArray *items = @[global, channels, general, videos, posts, playlists, options,
+    NSArray *items = @[global, channelItem, general, videoItem, postItem, playlistItem, optionItem,
                        importSettings, exportSettings];
 
     SEL modern = @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:);

@@ -20,7 +20,7 @@
 "ui.list.content" = "内容";
 "ui.list.playlist_id" = "再生リストID";
 "ui.list.post_id" = "投稿ID";
-"ui.list.rules" = "ルール";
+"ui.list.rule" = "ルール";
 "ui.option.case_sensitive" = "大文字と小文字を区別";
 "ui.option.exact_match" = "完全一致";
 "ui.category.option" = "オプション";
@@ -74,7 +74,7 @@
 "error.mutation.rule_not_found" = "ルールは既に削除されているか、存在しません。";
 "error.mutation.selected_rule_missing" = "選択されたルールの内、少なくとも1件が存在しません。";
 "error.mutation.invalid_list" = "指定されたリストは無効です。";
-"error.mutation.no_rules_selected" = "ルールが選択されていません。";
+"error.mutation.no_rule_selected" = "ルールが選択されていません。";
 "error.mutation.duplicate_rule_identifiers" = "削除要求に重複したルール識別子が含まれています。";
 "error.mutation.invalid_destination_position" = "移動先の位置が無効です。";
 "error.mutation.unsupported_option" = "このオプションは選択したリストではサポートされていません。";

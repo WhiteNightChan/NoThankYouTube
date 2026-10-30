@@ -1,6 +1,6 @@
-#import "NTYTBlockOptions.h"
+#import "NTYTBlockOptionState.h"
 
-@implementation NTYTBlockOptions
+@implementation NTYTBlockOptionState
 
 - (instancetype)initWithBlockShorts:(BOOL)blockShorts
                           blockPost:(BOOL)blockPost
@@ -42,15 +42,15 @@
     return NO;
 }
 
-+ (instancetype)allOffOptions {
-    static NTYTBlockOptions *options;
++ (instancetype)allOffState {
+    static NTYTBlockOptionState *blockOptionState;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        options = [[self alloc] initWithBlockShorts:NO blockPost:NO blockPlaylist:NO
+        blockOptionState = [[self alloc] initWithBlockShorts:NO blockPost:NO blockPlaylist:NO
                                          blockMix:NO blockHorizontalShelf:NO blockFromYouTube:NO
                          blockAdSupportedFreeMovie:NO blockCellDivider:NO blockStation:NO];
     });
-    return options;
+    return blockOptionState;
 }
 
 @end

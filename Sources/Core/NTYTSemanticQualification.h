@@ -18,9 +18,9 @@ typedef NS_ENUM(NSInteger, NTYTPlaylistSubtype) {
 };
 
 typedef NS_ENUM(NSInteger, NTYTPresentationQualification) {
-    NTYTPresentationQualificationUnavailable = 0,
-    NTYTPresentationQualificationNotConfirmed,
-    NTYTPresentationQualificationConfirmed,
+    NTYTPresentationQualificationNotConfirmed = 0,
+    NTYTPresentationQualificationConfirmed = 1,
+    NTYTPresentationQualificationUnavailable = 2,
 };
 
 typedef NS_ENUM(NSInteger, NTYTHorizontalShelfException) {

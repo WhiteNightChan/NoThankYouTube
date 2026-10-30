@@ -2,7 +2,7 @@
 
 #import "NTYTListDefinition.h"
 #import "NTYTTypes.h"
-#import "NTYTBlockOptions.h"
+#import "NTYTBlockOptionState.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -61,12 +61,12 @@ NS_ASSUME_NONNULL_BEGIN
 @interface NTYTRuntimeListState : NSObject
 
 @property(nonatomic, readonly) NTYTListID listID;
-@property(nonatomic, strong, readonly) NTYTMatchOptions *options;
-@property(nonatomic, copy, readonly) NSArray<NTYTRuntimeRule *> *rules;
+@property(nonatomic, strong, readonly) NTYTMatchOptionState *matchOptionState;
+@property(nonatomic, copy, readonly) NSArray<NTYTRuntimeRule *> *ruleSequence;
 
 - (instancetype)initWithListID:(NTYTListID)listID
-                        options:(NTYTMatchOptions *)options
-                          rules:(NSArray<NTYTRuntimeRule *> *)rules NS_DESIGNATED_INITIALIZER;
+                        matchOptionState:(NTYTMatchOptionState *)matchOptionState
+                          ruleSequence:(NSArray<NTYTRuntimeRule *> *)ruleSequence NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
@@ -74,10 +74,10 @@ NS_ASSUME_NONNULL_BEGIN
 @interface NTYTRuntimeSettingsSnapshot : NSObject
 
 @property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTRuntimeListState *> *listStates;
-@property(nonatomic, strong, readonly) NTYTBlockOptions *blockOptions;
+@property(nonatomic, strong, readonly) NTYTBlockOptionState *blockOptionState;
 
 - (instancetype)initWithListStates:(NSDictionary<NSNumber *, NTYTRuntimeListState *> *)listStates
-                            blockOptions:(NTYTBlockOptions *)blockOptions NS_DESIGNATED_INITIALIZER;
+                            blockOptionState:(NTYTBlockOptionState *)blockOptionState NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 - (nullable NTYTRuntimeListState *)stateForListID:(NTYTListID)listID;
 + (instancetype)emptySnapshot;

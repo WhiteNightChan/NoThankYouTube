@@ -46,7 +46,7 @@ typedef NS_ENUM(NSInteger, NTYTImportCommitStatus) {
 
 - (NTYTSettingsLifecycleState)lifecycleState;
 - (BOOL)mutationsAllowed;
-- (NSArray<NTYTStoredRule *> *)rulesForListID:(NTYTListID)listID;
+- (NSArray<NTYTStoredRule *> *)ruleSequenceForListID:(NTYTListID)listID;
 - (BOOL)effectiveValueForOption:(NTYTListOptionID)optionID listID:(NTYTListID)listID;
 - (BOOL)effectiveValueForBlockOption:(NTYTBlockOptionID)optionID;
 

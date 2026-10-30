@@ -20,7 +20,7 @@
 "ui.list.content" = "Content";
 "ui.list.playlist_id" = "Playlist ID";
 "ui.list.post_id" = "Post ID";
-"ui.list.rules" = "Rules";
+"ui.list.rule" = "Rules";
 "ui.option.case_sensitive" = "Case Sensitive";
 "ui.option.exact_match" = "Exact Match";
 "ui.category.option" = "Option";
@@ -74,7 +74,7 @@
 "error.mutation.rule_not_found" = "The rule no longer exists.";
 "error.mutation.selected_rule_missing" = "At least one selected rule no longer exists.";
 "error.mutation.invalid_list" = "The requested list is invalid.";
-"error.mutation.no_rules_selected" = "No rules were selected.";
+"error.mutation.no_rule_selected" = "No rules were selected.";
 "error.mutation.duplicate_rule_identifiers" = "The delete request contains duplicate rule identifiers.";
 "error.mutation.invalid_destination_position" = "The destination position is invalid.";
 "error.mutation.unsupported_option" = "This option is not supported by the selected list.";

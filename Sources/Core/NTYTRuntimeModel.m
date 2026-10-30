@@ -118,13 +118,13 @@
 @implementation NTYTRuntimeListState
 
 - (instancetype)initWithListID:(NTYTListID)listID
-                        options:(NTYTMatchOptions *)options
-                          rules:(NSArray<NTYTRuntimeRule *> *)rules {
+                        matchOptionState:(NTYTMatchOptionState *)matchOptionState
+                          ruleSequence:(NSArray<NTYTRuntimeRule *> *)ruleSequence {
     self = [super init];
     if (self) {
         _listID = listID;
-        _options = options;
-        _rules = [rules copy];
+        _matchOptionState = matchOptionState;
+        _ruleSequence = [ruleSequence copy];
     }
     return self;
 }
@@ -134,12 +134,12 @@
 @implementation NTYTRuntimeSettingsSnapshot
 
 - (instancetype)initWithListStates:(NSDictionary<NSNumber *,NTYTRuntimeListState *> *)listStates
-                            blockOptions:(NTYTBlockOptions *)blockOptions {
+                            blockOptionState:(NTYTBlockOptionState *)blockOptionState {
     self = [super init];
     if (self) {
         _listStates = [listStates copy];
-        NSParameterAssert(blockOptions);
-        _blockOptions = blockOptions;
+        NSParameterAssert(blockOptionState);
+        _blockOptionState = blockOptionState;
     }
     return self;
 }
@@ -154,10 +154,10 @@
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
         states[@(definition.listID)] =
             [[NTYTRuntimeListState alloc] initWithListID:definition.listID
-                                                 options:definition.defaultOptions
-                                                   rules:@[]];
+                                                 matchOptionState:definition.defaultMatchOptionState
+                                                   ruleSequence:@[]];
     }
-    return [[self alloc] initWithListStates:states blockOptions:[NTYTBlockOptions allOffOptions]];
+    return [[self alloc] initWithListStates:states blockOptionState:[NTYTBlockOptionState allOffState]];
 }
 
 @end

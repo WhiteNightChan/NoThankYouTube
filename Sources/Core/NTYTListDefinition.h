@@ -4,7 +4,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface NTYTMatchOptions : NSObject <NSCopying>
+@interface NTYTMatchOptionState : NSObject <NSCopying>
 
 @property(nonatomic, readonly) BOOL caseSensitive;
 @property(nonatomic, readonly) BOOL exactMatch;
@@ -22,8 +22,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly) NTYTTargetKind targetKind;
 @property(nonatomic, copy, readonly) NSSet<NSNumber *> *applicableContentTypes;
 @property(nonatomic, copy, readonly) NSArray<NSString *> *storagePath;
-@property(nonatomic, copy, readonly) NSSet<NSNumber *> *supportedOptions;
-@property(nonatomic, strong, readonly) NTYTMatchOptions *defaultOptions;
+@property(nonatomic, copy, readonly) NSSet<NSNumber *> *supportedOptionIDs;
+@property(nonatomic, strong, readonly) NTYTMatchOptionState *defaultMatchOptionState;
 
 - (BOOL)supportsOption:(NTYTListOptionID)optionID;
 - (BOOL)defaultValueForOption:(NTYTListOptionID)optionID;

@@ -115,8 +115,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                                           listID:(NTYTListID)listID;
 - (NTYTStoredSettings *)settingsByReplacingBlockOption:(NTYTBlockOptionID)optionID
                                                value:(BOOL)value;
-- (NSUInteger)findRuleID:(NSUUID *)ruleID inRules:(NSArray<NTYTStoredRule *> *)rules;
-- (BOOL)rules:(NSArray<NTYTStoredRule *> *)rules
+- (NSUInteger)findRuleID:(NSUUID *)ruleID inRuleSequence:(NSArray<NTYTStoredRule *> *)ruleSequence;
+- (BOOL)ruleSequence:(NSArray<NTYTStoredRule *> *)ruleSequence
     containExpressionDuplicate:(NSString *)expression
                excludingRuleID:(nullable NSUUID *)excludedRuleID;
 - (nullable NTYTMutationResult *)validateExpression:(NSString *)expression
@@ -238,12 +238,12 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     return allowed;
 }
 
-- (NSArray<NTYTStoredRule *> *)rulesForListID:(NTYTListID)listID {
-    __block NSArray<NTYTStoredRule *> *rules;
+- (NSArray<NTYTStoredRule *> *)ruleSequenceForListID:(NTYTListID)listID {
+    __block NSArray<NTYTStoredRule *> *ruleSequence;
     [self performSynchronous:^{
-        rules = [[self.committedSettings listForID:listID].rules copy];
+        ruleSequence = [[self.committedSettings listForID:listID].ruleSequence copy];
     }];
-    return rules ?: @[];
+    return ruleSequence ?: @[];
 }
 
 - (BOOL)effectiveValueForOption:(NTYTListOptionID)optionID listID:(NTYTListID)listID {
@@ -265,7 +265,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
     __block BOOL value = NO;
     [self performSynchronous:^{
         if (optionID < NTYTBlockOptionIDShorts || optionID > NTYTBlockOptionIDStation) return;
-        value = [self.committedSettings.blockOptions valueForOption:optionID];
+        value = [self.committedSettings.blockOptionState valueForOption:optionID];
     }];
     return value;
 }
@@ -297,7 +297,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
         }
 
         NTYTStoredList *currentList = [self.committedSettings listForID:listID];
-        if ([self rules:currentList.rules
+        if ([self ruleSequence:currentList.ruleSequence
             containExpressionDuplicate:rawExpression
                        excludingRuleID:nil]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorDuplicateExpression
@@ -308,7 +308,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 
         NSMutableSet<NSUUID *> *existingIDs = [NSMutableSet set];
         for (NTYTListDefinition *otherDefinition in NTYTListDefinition.allDefinitions) {
-            for (NTYTStoredRule *rule in [self.committedSettings listForID:otherDefinition.listID].rules) {
+            for (NTYTStoredRule *rule in [self.committedSettings listForID:otherDefinition.listID].ruleSequence) {
                 [existingIDs addObject:rule.identifier];
             }
         }
@@ -317,12 +317,12 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             identifier = [NSUUID UUID];
         } while ([existingIDs containsObject:identifier]);
 
-        NSMutableArray *rules = [currentList.rules mutableCopy];
-        [rules addObject:[[NTYTStoredRule alloc] initWithIdentifier:identifier
+        NSMutableArray *ruleSequence = [currentList.ruleSequence mutableCopy];
+        [ruleSequence addObject:[[NTYTStoredRule alloc] initWithIdentifier:identifier
                                                         expression:rawExpression]];
         NTYTStoredList *candidateList =
             [[NTYTStoredList alloc] initWithOptionOverrides:currentList.optionOverrides
-                                                      rules:rules];
+                                                      ruleSequence:ruleSequence];
         result = [self commitCandidateSettingsOnQueue:
             [self settingsByReplacingList:candidateList listID:listID]];
     }];
@@ -341,14 +341,14 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             return;
         }
         NTYTStoredList *currentList = [self.committedSettings listForID:listID];
-        NSUInteger index = [self findRuleID:ruleID inRules:currentList.rules];
+        NSUInteger index = [self findRuleID:ruleID inRuleSequence:currentList.ruleSequence];
         if (index == NSNotFound) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorRuleNotFound
                                                  reason:NTYTMutationFailureReasonRuleNotFound
                                            underlyingError:nil];
             return;
         }
-        NTYTStoredRule *currentRule = currentList.rules[index];
+        NTYTStoredRule *currentRule = currentList.ruleSequence[index];
         if ([currentRule.expression isEqualToString:rawExpression]) {
             result = [NTYTMutationResult noChangeResult];
             return;
@@ -360,7 +360,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             result = validation;
             return;
         }
-        if ([self rules:currentList.rules
+        if ([self ruleSequence:currentList.ruleSequence
             containExpressionDuplicate:rawExpression
                        excludingRuleID:ruleID]) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorDuplicateExpression
@@ -369,12 +369,12 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             return;
         }
 
-        NSMutableArray *rules = [currentList.rules mutableCopy];
-        rules[index] = [[NTYTStoredRule alloc] initWithIdentifier:ruleID
+        NSMutableArray *ruleSequence = [currentList.ruleSequence mutableCopy];
+        ruleSequence[index] = [[NTYTStoredRule alloc] initWithIdentifier:ruleID
                                                        expression:rawExpression];
         NTYTStoredList *candidateList =
             [[NTYTStoredList alloc] initWithOptionOverrides:currentList.optionOverrides
-                                                      rules:rules];
+                                                      ruleSequence:ruleSequence];
         result = [self commitCandidateSettingsOnQueue:
             [self settingsByReplacingList:candidateList listID:listID]];
     }];
@@ -396,7 +396,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
         }
         if (ruleIDs.count == 0) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
-                                                 reason:NTYTMutationFailureReasonNoRulesSelected
+                                                 reason:NTYTMutationFailureReasonNoRuleSelected
                                            underlyingError:nil];
             return;
         }
@@ -410,7 +410,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             return;
         }
         for (NSUUID *targetID in targetIDs) {
-            if ([self findRuleID:targetID inRules:currentList.rules] == NSNotFound) {
+            if ([self findRuleID:targetID inRuleSequence:currentList.ruleSequence] == NSNotFound) {
                 result = [NTYTMutationResult failureWithCode:NTYTMutationErrorRuleNotFound
                                                      reason:NTYTMutationFailureReasonSelectedRuleMissing
                                            underlyingError:nil];
@@ -418,15 +418,15 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             }
         }
 
-        NSMutableArray<NTYTStoredRule *> *rules = [NSMutableArray array];
-        for (NTYTStoredRule *rule in currentList.rules) {
+        NSMutableArray<NTYTStoredRule *> *ruleSequence = [NSMutableArray array];
+        for (NTYTStoredRule *rule in currentList.ruleSequence) {
             if (![targetIDs containsObject:rule.identifier]) {
-                [rules addObject:rule];
+                [ruleSequence addObject:rule];
             }
         }
         NTYTStoredList *candidateList =
             [[NTYTStoredList alloc] initWithOptionOverrides:currentList.optionOverrides
-                                                      rules:rules];
+                                                      ruleSequence:ruleSequence];
         result = [self commitCandidateSettingsOnQueue:
             [self settingsByReplacingList:candidateList listID:listID]];
     }];
@@ -445,14 +445,14 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             return;
         }
         NTYTStoredList *currentList = [self.committedSettings listForID:listID];
-        NSUInteger sourceIndex = [self findRuleID:ruleID inRules:currentList.rules];
+        NSUInteger sourceIndex = [self findRuleID:ruleID inRuleSequence:currentList.ruleSequence];
         if (sourceIndex == NSNotFound) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorRuleNotFound
                                                  reason:NTYTMutationFailureReasonRuleNotFound
                                            underlyingError:nil];
             return;
         }
-        if (destinationIndex >= currentList.rules.count) {
+        if (destinationIndex >= currentList.ruleSequence.count) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
                                                  reason:NTYTMutationFailureReasonInvalidDestinationPosition
                                            underlyingError:nil];
@@ -463,13 +463,13 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
             return;
         }
 
-        NSMutableArray<NTYTStoredRule *> *rules = [currentList.rules mutableCopy];
-        NTYTStoredRule *rule = rules[sourceIndex];
-        [rules removeObjectAtIndex:sourceIndex];
-        [rules insertObject:rule atIndex:destinationIndex];
+        NSMutableArray<NTYTStoredRule *> *ruleSequence = [currentList.ruleSequence mutableCopy];
+        NTYTStoredRule *rule = ruleSequence[sourceIndex];
+        [ruleSequence removeObjectAtIndex:sourceIndex];
+        [ruleSequence insertObject:rule atIndex:destinationIndex];
         NTYTStoredList *candidateList =
             [[NTYTStoredList alloc] initWithOptionOverrides:currentList.optionOverrides
-                                                      rules:rules];
+                                                      ruleSequence:ruleSequence];
         result = [self commitCandidateSettingsOnQueue:
             [self settingsByReplacingList:candidateList listID:listID]];
     }];
@@ -514,7 +514,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
         }
         NTYTStoredList *candidateList =
             [[NTYTStoredList alloc] initWithOptionOverrides:overrides
-                                                      rules:currentList.rules];
+                                                      ruleSequence:currentList.ruleSequence];
         result = [self commitCandidateSettingsOnQueue:
             [self settingsByReplacingList:candidateList listID:listID]];
     }];
@@ -537,7 +537,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                                         underlyingError:nil];
             return;
         }
-        if ([self.committedSettings.blockOptions valueForOption:optionID] == value) {
+        if ([self.committedSettings.blockOptionState valueForOption:optionID] == value) {
             result = [NTYTMutationResult noChangeResult];
             return;
         }
@@ -578,11 +578,11 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 
 - (NTYTStoredSettings *)settingsByReplacingList:(NTYTStoredList *)list
                                           listID:(NTYTListID)listID {
-    NSMutableDictionary<NSNumber *, NTYTStoredList *> *lists =
-        [self.committedSettings.lists mutableCopy];
-    lists[@(listID)] = list;
-    return [[NTYTStoredSettings alloc] initWithLists:lists
-                                            blockOptions:self.committedSettings.blockOptions];
+    NSMutableDictionary<NSNumber *, NTYTStoredList *> *listStateMap =
+        [self.committedSettings.listStateMap mutableCopy];
+    listStateMap[@(listID)] = list;
+    return [[NTYTStoredSettings alloc] initWithListStateMap:listStateMap
+                                            blockOptionState:self.committedSettings.blockOptionState];
 }
 
 - (BOOL)commitPreparedSettingsOnQueue:(NTYTStoredSettings *)settings
@@ -601,29 +601,29 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 
 - (BOOL)settings:(NTYTStoredSettings *)first
   semanticallyEqualTo:(NTYTStoredSettings *)second {
-    NTYTBlockOptions *aOptions = first.blockOptions;
-    NTYTBlockOptions *bOptions = second.blockOptions;
-    if (aOptions.blockShorts != bOptions.blockShorts ||
-        aOptions.blockPost != bOptions.blockPost ||
-        aOptions.blockPlaylist != bOptions.blockPlaylist ||
-        aOptions.blockMix != bOptions.blockMix ||
-        aOptions.blockHorizontalShelf != bOptions.blockHorizontalShelf ||
-        aOptions.blockFromYouTube != bOptions.blockFromYouTube ||
-        aOptions.blockAdSupportedFreeMovie != bOptions.blockAdSupportedFreeMovie ||
-        aOptions.blockCellDivider != bOptions.blockCellDivider ||
-        aOptions.blockStation != bOptions.blockStation) {
+    NTYTBlockOptionState *firstBlockOptionState = first.blockOptionState;
+    NTYTBlockOptionState *secondBlockOptionState = second.blockOptionState;
+    if (firstBlockOptionState.blockShorts != secondBlockOptionState.blockShorts ||
+        firstBlockOptionState.blockPost != secondBlockOptionState.blockPost ||
+        firstBlockOptionState.blockPlaylist != secondBlockOptionState.blockPlaylist ||
+        firstBlockOptionState.blockMix != secondBlockOptionState.blockMix ||
+        firstBlockOptionState.blockHorizontalShelf != secondBlockOptionState.blockHorizontalShelf ||
+        firstBlockOptionState.blockFromYouTube != secondBlockOptionState.blockFromYouTube ||
+        firstBlockOptionState.blockAdSupportedFreeMovie != secondBlockOptionState.blockAdSupportedFreeMovie ||
+        firstBlockOptionState.blockCellDivider != secondBlockOptionState.blockCellDivider ||
+        firstBlockOptionState.blockStation != secondBlockOptionState.blockStation) {
         return NO;
     }
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
         NTYTStoredList *a = [first listForID:definition.listID];
         NTYTStoredList *b = [second listForID:definition.listID];
         if (![a.optionOverrides isEqualToDictionary:b.optionOverrides] ||
-            a.rules.count != b.rules.count) {
+            a.ruleSequence.count != b.ruleSequence.count) {
             return NO;
         }
-        for (NSUInteger index = 0; index < a.rules.count; index++) {
-            NTYTStoredRule *left = a.rules[index];
-            NTYTStoredRule *right = b.rules[index];
+        for (NSUInteger index = 0; index < a.ruleSequence.count; index++) {
+            NTYTStoredRule *left = a.ruleSequence[index];
+            NTYTStoredRule *right = b.ruleSequence[index];
             if (![left.identifier isEqual:right.identifier] ||
                 ![left.expression isEqualToString:right.expression]) {
                 return NO;
@@ -695,8 +695,8 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 
 - (NTYTStoredSettings *)settingsByReplacingBlockOption:(NTYTBlockOptionID)optionID
                                                value:(BOOL)value {
-    NTYTBlockOptions *current = self.committedSettings.blockOptions;
-    NTYTBlockOptions *options = [[NTYTBlockOptions alloc]
+    NTYTBlockOptionState *current = self.committedSettings.blockOptionState;
+    NTYTBlockOptionState *blockOptionState = [[NTYTBlockOptionState alloc]
         initWithBlockShorts:optionID == NTYTBlockOptionIDShorts ? value : current.blockShorts
                  blockPost:optionID == NTYTBlockOptionIDPost ? value : current.blockPost
              blockPlaylist:optionID == NTYTBlockOptionIDPlaylist ? value : current.blockPlaylist
@@ -706,28 +706,28 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
  blockAdSupportedFreeMovie:optionID == NTYTBlockOptionIDAdSupportedFreeMovie ? value : current.blockAdSupportedFreeMovie
           blockCellDivider:optionID == NTYTBlockOptionIDCellDivider ? value : current.blockCellDivider
               blockStation:optionID == NTYTBlockOptionIDStation ? value : current.blockStation];
-    return [[NTYTStoredSettings alloc] initWithLists:self.committedSettings.lists
-                                      blockOptions:options];
+    return [[NTYTStoredSettings alloc] initWithListStateMap:self.committedSettings.listStateMap
+                                      blockOptionState:blockOptionState];
 }
 
-- (NSUInteger)findRuleID:(NSUUID *)ruleID inRules:(NSArray<NTYTStoredRule *> *)rules {
+- (NSUInteger)findRuleID:(NSUUID *)ruleID inRuleSequence:(NSArray<NTYTStoredRule *> *)ruleSequence {
     if (!ruleID) {
         return NSNotFound;
     }
-    for (NSUInteger index = 0; index < rules.count; index++) {
-        if ([rules[index].identifier isEqual:ruleID]) {
+    for (NSUInteger index = 0; index < ruleSequence.count; index++) {
+        if ([ruleSequence[index].identifier isEqual:ruleID]) {
             return index;
         }
     }
     return NSNotFound;
 }
 
-- (BOOL)rules:(NSArray<NTYTStoredRule *> *)rules
+- (BOOL)ruleSequence:(NSArray<NTYTStoredRule *> *)ruleSequence
     containExpressionDuplicate:(NSString *)expression
                excludingRuleID:(NSUUID *)excludedRuleID {
     NSString *comparison = [expression stringByTrimmingCharactersInSet:
         [NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    for (NTYTStoredRule *rule in rules) {
+    for (NTYTStoredRule *rule in ruleSequence) {
         if (excludedRuleID && [rule.identifier isEqual:excludedRuleID]) {
             continue;
         }

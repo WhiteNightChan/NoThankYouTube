@@ -58,10 +58,10 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
                                         root:(NSDictionary *)root
                                 missingValid:(BOOL *)missingValid
                                     degraded:(BOOL *)degraded;
-- (NSDictionary<NSNumber *, NSNumber *> *)readOptionsFromListDictionary:(NSDictionary *)listDictionary
+- (NSDictionary<NSNumber *, NSNumber *> *)readOptionOverrideMapFromListDictionary:(NSDictionary *)listDictionary
                                                               definition:(NTYTListDefinition *)definition
                                                                 degraded:(BOOL *)degraded;
-- (NSArray<NTYTRawRuleOccurrence *> *)readRulesFromListDictionary:(NSDictionary *)listDictionary
+- (NSArray<NTYTRawRuleOccurrence *> *)readRuleOccurrenceSequenceFromListDictionary:(NSDictionary *)listDictionary
                                                           degraded:(BOOL *)degraded;
 - (NSDictionary *)propertyListForSettings:(NTYTStoredSettings *)settings;
 
@@ -94,16 +94,16 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
 - (NTYTSettingsLoadResult *)load {
     NSFileManager *fileManager = NSFileManager.defaultManager;
     if (![fileManager fileExistsAtPath:self.filePath]) {
-        NSMutableDictionary *emptyLists = [NSMutableDictionary dictionary];
+        NSMutableDictionary *emptyListStateMap = [NSMutableDictionary dictionary];
         for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
-            emptyLists[@(definition.listID)] =
+            emptyListStateMap[@(definition.listID)] =
                 [[NTYTRawList alloc] initWithValidOptionOverrides:@{}
                                                    ruleOccurrences:@[]];
         }
         NTYTRawSettings *raw = [[NTYTRawSettings alloc] initWithAbsent:YES
                                                          baseDegraded:NO
-                                                                lists:emptyLists
-                                                              blockOptions:[NTYTBlockOptions allOffOptions]];
+                                                                listStateMap:emptyListStateMap
+                                                              blockOptionState:[NTYTBlockOptionState allOffState]];
         return [[NTYTSettingsLoadResult alloc]
             initWithLifecycleState:NTYTSettingsLifecycleStateAbsent
                        rawSettings:raw
@@ -148,8 +148,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
 
     __block BOOL degraded = NO;
     NSSet *allowedRootKeys = [NSSet setWithArray:@[
-        @"schemaVersion", @"syntaxVersion", @"general", @"videos", @"channels",
-        @"posts", @"playlists", @"global", @"options",
+        @"schemaVersion", @"syntaxVersion", @"general", @"video", @"channel",
+        @"post", @"playlist", @"global", @"option",
     ]];
     for (id key in root) {
         if (![key isKindOfClass:[NSString class]] || ![allowedRootKeys containsObject:key]) {
@@ -159,10 +159,10 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
 
     NSDictionary<NSString *, NSSet<NSString *> *> *allowedSectionKeys = @{
         @"general": [NSSet setWithArray:@[@"block", @"allow"]],
-        @"videos": [NSSet setWithArray:@[@"title", @"channel", @"id"]],
-        @"channels": [NSSet setWithArray:@[@"block", @"allow"]],
-        @"posts": [NSSet setWithArray:@[@"content", @"channel", @"id"]],
-        @"playlists": [NSSet setWithArray:@[@"title", @"channel", @"id"]],
+        @"video": [NSSet setWithArray:@[@"title", @"channel", @"id"]],
+        @"channel": [NSSet setWithArray:@[@"block", @"allow"]],
+        @"post": [NSSet setWithArray:@[@"content", @"channel", @"id"]],
+        @"playlist": [NSSet setWithArray:@[@"title", @"channel", @"id"]],
         @"global": [NSSet setWithArray:@[@"block", @"allow"]],
     };
     [allowedSectionKeys enumerateKeysAndObjectsUsingBlock:^(NSString *sectionKey,
@@ -185,9 +185,9 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
 
     // Missing and explicit false are both effective Off. Only true survives canonically.
     NSMutableDictionary<NSString *, NSNumber *> *validBlockValues = [NSMutableDictionary dictionary];
-    id blockOptionsObject = root[@"options"];
-    if (blockOptionsObject) {
-        if (![blockOptionsObject isKindOfClass:[NSDictionary class]]) {
+    id blockOptionObject = root[@"option"];
+    if (blockOptionObject) {
+        if (![blockOptionObject isKindOfClass:[NSDictionary class]]) {
             degraded = YES;
         } else {
             NSSet<NSString *> *known = [NSSet setWithArray:@[
@@ -195,9 +195,9 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
                 @"blockHorizontalShelf", @"blockFromYouTube",
                 @"blockAdSupportedFreeMovie", @"blockCellDivider", @"blockStation",
             ]];
-            NSDictionary *options = (NSDictionary *)blockOptionsObject;
-            for (id key in options) {
-                id value = options[key];
+            NSDictionary *blockOptionMap = (NSDictionary *)blockOptionObject;
+            for (id key in blockOptionMap) {
+                id value = blockOptionMap[key];
                 if (![key isKindOfClass:[NSString class]] ||
                     ![known containsObject:key] || !NTYTIsPropertyListBoolean(value)) {
                     degraded = YES;
@@ -207,7 +207,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
             }
         }
     }
-    NTYTBlockOptions *blockOptions = [[NTYTBlockOptions alloc]
+    NTYTBlockOptionState *blockOptionState = [[NTYTBlockOptionState alloc]
         initWithBlockShorts:[validBlockValues[@"blockShorts"] boolValue]
                  blockPost:[validBlockValues[@"blockPost"] boolValue]
              blockPlaylist:[validBlockValues[@"blockPlaylist"] boolValue]
@@ -218,7 +218,7 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
           blockCellDivider:[validBlockValues[@"blockCellDivider"] boolValue]
               blockStation:[validBlockValues[@"blockStation"] boolValue]];
 
-    NSMutableDictionary<NSNumber *, NTYTRawList *> *rawLists = [NSMutableDictionary dictionary];
+    NSMutableDictionary<NSNumber *, NTYTRawList *> *rawListStateMap = [NSMutableDictionary dictionary];
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
         BOOL missingValid = NO;
         NSDictionary *listDictionary = [self dictionaryAtPath:definition.storagePath
@@ -226,36 +226,36 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
                                                  missingValid:&missingValid
                                                      degraded:&degraded];
         if (!listDictionary) {
-            rawLists[@(definition.listID)] =
+            rawListStateMap[@(definition.listID)] =
                 [[NTYTRawList alloc] initWithValidOptionOverrides:@{}
                                                    ruleOccurrences:@[]];
             continue;
         }
 
-        NSSet *allowedListKeys = definition.supportedOptions.count > 0
-            ? [NSSet setWithArray:@[@"options", @"rules"]]
-            : [NSSet setWithObject:@"rules"];
+        NSSet *allowedListKeys = definition.supportedOptionIDs.count > 0
+            ? [NSSet setWithArray:@[@"option", @"rule"]]
+            : [NSSet setWithObject:@"rule"];
         for (id key in listDictionary) {
             if (![key isKindOfClass:[NSString class]] || ![allowedListKeys containsObject:key]) {
                 degraded = YES;
             }
         }
 
-        NSDictionary *options = [self readOptionsFromListDictionary:listDictionary
+        NSDictionary *optionOverrideMap = [self readOptionOverrideMapFromListDictionary:listDictionary
                                                            definition:definition
                                                              degraded:&degraded];
-        NSArray *rules = [self readRulesFromListDictionary:listDictionary
+        NSArray *ruleSequence = [self readRuleOccurrenceSequenceFromListDictionary:listDictionary
                                                   degraded:&degraded];
-        rawLists[@(definition.listID)] =
-            [[NTYTRawList alloc] initWithValidOptionOverrides:options
-                                               ruleOccurrences:rules];
+        rawListStateMap[@(definition.listID)] =
+            [[NTYTRawList alloc] initWithValidOptionOverrides:optionOverrideMap
+                                               ruleOccurrences:ruleSequence];
     }
 
     NTYTRawSettings *rawSettings =
         [[NTYTRawSettings alloc] initWithAbsent:NO
                                    baseDegraded:degraded
-                                          lists:rawLists
-                                        blockOptions:blockOptions];
+                                          listStateMap:rawListStateMap
+                                        blockOptionState:blockOptionState];
     NTYTSettingsLifecycleState state = degraded
         ? NTYTSettingsLifecycleStateSupportedDegraded
         : NTYTSettingsLifecycleStateSupportedValid;
@@ -290,30 +290,30 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     return current;
 }
 
-- (NSDictionary<NSNumber *,NSNumber *> *)readOptionsFromListDictionary:(NSDictionary *)listDictionary
+- (NSDictionary<NSNumber *,NSNumber *> *)readOptionOverrideMapFromListDictionary:(NSDictionary *)listDictionary
                                                               definition:(NTYTListDefinition *)definition
                                                                 degraded:(BOOL *)degraded {
-    id optionsObject = listDictionary[@"options"];
-    if (!optionsObject) {
+    id optionOverrideObject = listDictionary[@"option"];
+    if (!optionOverrideObject) {
         return @{};
     }
-    if (![optionsObject isKindOfClass:[NSDictionary class]] ||
-        definition.supportedOptions.count == 0) {
+    if (![optionOverrideObject isKindOfClass:[NSDictionary class]] ||
+        definition.supportedOptionIDs.count == 0) {
         *degraded = YES;
         return @{};
     }
 
-    NSDictionary *optionsDictionary = (NSDictionary *)optionsObject;
+    NSDictionary *optionOverrideMap = (NSDictionary *)optionOverrideObject;
     NSDictionary<NSString *, NSNumber *> *optionMap = @{
         @"caseSensitive": @(NTYTListOptionIDCaseSensitive),
         @"exactMatch": @(NTYTListOptionIDExactMatch),
     };
     NSMutableDictionary<NSNumber *, NSNumber *> *valid = [NSMutableDictionary dictionary];
-    for (id key in optionsDictionary) {
+    for (id key in optionOverrideMap) {
         NSNumber *optionID = [key isKindOfClass:[NSString class]] ? optionMap[key] : nil;
-        id value = optionsDictionary[key];
+        id value = optionOverrideMap[key];
         if (!optionID ||
-            ![definition.supportedOptions containsObject:optionID] ||
+            ![definition.supportedOptionIDs containsObject:optionID] ||
             !NTYTIsPropertyListBoolean(value)) {
             *degraded = YES;
             continue;
@@ -328,20 +328,20 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     return valid;
 }
 
-- (NSArray<NTYTRawRuleOccurrence *> *)readRulesFromListDictionary:(NSDictionary *)listDictionary
+- (NSArray<NTYTRawRuleOccurrence *> *)readRuleOccurrenceSequenceFromListDictionary:(NSDictionary *)listDictionary
                                                           degraded:(BOOL *)degraded {
-    id rulesObject = listDictionary[@"rules"];
-    if (!rulesObject) {
+    id ruleSequenceObject = listDictionary[@"rule"];
+    if (!ruleSequenceObject) {
         return @[];
     }
-    if (![rulesObject isKindOfClass:[NSArray class]]) {
+    if (![ruleSequenceObject isKindOfClass:[NSArray class]]) {
         *degraded = YES;
         return @[];
     }
 
     NSMutableArray<NTYTRawRuleOccurrence *> *occurrences = [NSMutableArray array];
     NSSet *allowedRuleKeys = [NSSet setWithArray:@[@"id", @"expression"]];
-    for (id object in (NSArray *)rulesObject) {
+    for (id object in (NSArray *)ruleSequenceObject) {
         if (![object isKindOfClass:[NSDictionary class]]) {
             *degraded = YES;
             [occurrences addObject:[[NTYTRawRuleOccurrence alloc]
@@ -412,35 +412,35 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     };
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
         NTYTStoredList *storedList = [settings listForID:definition.listID];
-        if (storedList.optionOverrides.count == 0 && storedList.rules.count == 0) {
+        if (storedList.optionOverrides.count == 0 && storedList.ruleSequence.count == 0) {
             continue;
         }
         NSMutableDictionary *listDictionary = [NSMutableDictionary dictionary];
 
         if (storedList.optionOverrides.count > 0) {
-            NSMutableDictionary *options = [NSMutableDictionary dictionary];
+            NSMutableDictionary *optionOverrideMap = [NSMutableDictionary dictionary];
             [storedList.optionOverrides enumerateKeysAndObjectsUsingBlock:^(NSNumber *optionID,
                                                                             NSNumber *value,
                                                                             BOOL *stop) {
                 NSString *key = optionKeys[optionID];
                 if (key) {
-                    options[key] = @([value boolValue]);
+                    optionOverrideMap[key] = @([value boolValue]);
                 }
             }];
-            if (options.count > 0) {
-                listDictionary[@"options"] = options;
+            if (optionOverrideMap.count > 0) {
+                listDictionary[@"option"] = optionOverrideMap;
             }
         }
 
-        if (storedList.rules.count > 0) {
-            NSMutableArray *rules = [NSMutableArray arrayWithCapacity:storedList.rules.count];
-            for (NTYTStoredRule *rule in storedList.rules) {
-                [rules addObject:@{
+        if (storedList.ruleSequence.count > 0) {
+            NSMutableArray *ruleSequence = [NSMutableArray arrayWithCapacity:storedList.ruleSequence.count];
+            for (NTYTStoredRule *rule in storedList.ruleSequence) {
+                [ruleSequence addObject:@{
                     @"id": rule.identifier.UUIDString,
                     @"expression": rule.expression,
                 }];
             }
-            listDictionary[@"rules"] = rules;
+            listDictionary[@"rule"] = ruleSequence;
         }
 
         NSMutableDictionary *section = root[definition.storagePath[0]];
@@ -451,18 +451,18 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         section[definition.storagePath[1]] = listDictionary;
     }
 
-    NTYTBlockOptions *state = settings.blockOptions;
-    NSMutableDictionary *options = [NSMutableDictionary dictionary];
-    if (state.blockShorts) options[@"blockShorts"] = @YES;
-    if (state.blockPost) options[@"blockPost"] = @YES;
-    if (state.blockPlaylist) options[@"blockPlaylist"] = @YES;
-    if (state.blockMix) options[@"blockMix"] = @YES;
-    if (state.blockHorizontalShelf) options[@"blockHorizontalShelf"] = @YES;
-    if (state.blockFromYouTube) options[@"blockFromYouTube"] = @YES;
-    if (state.blockAdSupportedFreeMovie) options[@"blockAdSupportedFreeMovie"] = @YES;
-    if (state.blockCellDivider) options[@"blockCellDivider"] = @YES;
-    if (state.blockStation) options[@"blockStation"] = @YES;
-    if (options.count > 0) root[@"options"] = options;
+    NTYTBlockOptionState *state = settings.blockOptionState;
+    NSMutableDictionary *blockOptionMap = [NSMutableDictionary dictionary];
+    if (state.blockShorts) blockOptionMap[@"blockShorts"] = @YES;
+    if (state.blockPost) blockOptionMap[@"blockPost"] = @YES;
+    if (state.blockPlaylist) blockOptionMap[@"blockPlaylist"] = @YES;
+    if (state.blockMix) blockOptionMap[@"blockMix"] = @YES;
+    if (state.blockHorizontalShelf) blockOptionMap[@"blockHorizontalShelf"] = @YES;
+    if (state.blockFromYouTube) blockOptionMap[@"blockFromYouTube"] = @YES;
+    if (state.blockAdSupportedFreeMovie) blockOptionMap[@"blockAdSupportedFreeMovie"] = @YES;
+    if (state.blockCellDivider) blockOptionMap[@"blockCellDivider"] = @YES;
+    if (state.blockStation) blockOptionMap[@"blockStation"] = @YES;
+    if (blockOptionMap.count > 0) root[@"option"] = blockOptionMap;
     return root;
 }
 

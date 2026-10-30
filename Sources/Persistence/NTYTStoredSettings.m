@@ -18,11 +18,11 @@
 @implementation NTYTStoredList
 
 - (instancetype)initWithOptionOverrides:(NSDictionary<NSNumber *,NSNumber *> *)optionOverrides
-                                   rules:(NSArray<NTYTStoredRule *> *)rules {
+                                   ruleSequence:(NSArray<NTYTStoredRule *> *)ruleSequence {
     self = [super init];
     if (self) {
         _optionOverrides = [optionOverrides copy];
-        _rules = [rules copy];
+        _ruleSequence = [ruleSequence copy];
     }
     return self;
 }
@@ -31,29 +31,29 @@
 
 @implementation NTYTStoredSettings
 
-- (instancetype)initWithLists:(NSDictionary<NSNumber *,NTYTStoredList *> *)lists
-                       blockOptions:(NTYTBlockOptions *)blockOptions {
+- (instancetype)initWithListStateMap:(NSDictionary<NSNumber *,NTYTStoredList *> *)listStateMap
+                       blockOptionState:(NTYTBlockOptionState *)blockOptionState {
     self = [super init];
     if (self) {
-        _lists = [lists copy];
-        NSParameterAssert(blockOptions);
-        _blockOptions = blockOptions;
+        _listStateMap = [listStateMap copy];
+        NSParameterAssert(blockOptionState);
+        _blockOptionState = blockOptionState;
     }
     return self;
 }
 
 - (NTYTStoredList *)listForID:(NTYTListID)listID {
-    NTYTStoredList *list = self.lists[@(listID)];
-    return list ?: [[NTYTStoredList alloc] initWithOptionOverrides:@{} rules:@[]];
+    NTYTStoredList *list = self.listStateMap[@(listID)];
+    return list ?: [[NTYTStoredList alloc] initWithOptionOverrides:@{} ruleSequence:@[]];
 }
 
 + (instancetype)emptySettings {
-    NSMutableDictionary<NSNumber *, NTYTStoredList *> *lists = [NSMutableDictionary dictionary];
+    NSMutableDictionary<NSNumber *, NTYTStoredList *> *listStateMap = [NSMutableDictionary dictionary];
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
-        lists[@(definition.listID)] =
-            [[NTYTStoredList alloc] initWithOptionOverrides:@{} rules:@[]];
+        listStateMap[@(definition.listID)] =
+            [[NTYTStoredList alloc] initWithOptionOverrides:@{} ruleSequence:@[]];
     }
-    return [[self alloc] initWithLists:lists blockOptions:[NTYTBlockOptions allOffOptions]];
+    return [[self alloc] initWithListStateMap:listStateMap blockOptionState:[NTYTBlockOptionState allOffState]];
 }
 
 @end
@@ -89,15 +89,15 @@
 
 - (instancetype)initWithAbsent:(BOOL)absent
                   baseDegraded:(BOOL)baseDegraded
-                         lists:(NSDictionary<NSNumber *,NTYTRawList *> *)lists
-                       blockOptions:(NTYTBlockOptions *)blockOptions {
+                         listStateMap:(NSDictionary<NSNumber *,NTYTRawList *> *)listStateMap
+                       blockOptionState:(NTYTBlockOptionState *)blockOptionState {
     self = [super init];
     if (self) {
         _absent = absent;
         _baseDegraded = baseDegraded;
-        _lists = [lists copy];
-        NSParameterAssert(blockOptions);
-        _blockOptions = blockOptions;
+        _listStateMap = [listStateMap copy];
+        NSParameterAssert(blockOptionState);
+        _blockOptionState = blockOptionState;
     }
     return self;
 }

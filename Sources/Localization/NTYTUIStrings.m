@@ -7,21 +7,21 @@ NSString *NTYTAppName(void) { return @"NoThankYouTube"; }
 NSString *NTYTListTitle(NTYTListID listID) {
     switch (listID) {
         case NTYTListIDGeneralBlock:
-        case NTYTListIDChannelsBlock:
+        case NTYTListIDChannelBlock:
         case NTYTListIDGlobalBlock:
             return NTYTLocalizedString(@"ui.list.block");
         case NTYTListIDGeneralAllow:
-        case NTYTListIDChannelsAllow:
+        case NTYTListIDChannelAllow:
         case NTYTListIDGlobalAllow:
             return NTYTLocalizedString(@"ui.list.allow");
-        case NTYTListIDVideosTitle:
+        case NTYTListIDVideoTitle:
         case NTYTListIDPlaylistTitle:
             return NTYTLocalizedString(@"ui.list.title");
-        case NTYTListIDVideosChannel:
+        case NTYTListIDVideoChannel:
         case NTYTListIDPostChannel:
         case NTYTListIDPlaylistChannel:
             return NTYTLocalizedString(@"ui.list.channel");
-        case NTYTListIDVideosID:
+        case NTYTListIDVideoID:
             return NTYTLocalizedString(@"ui.list.video_id");
         case NTYTListIDPostContent:
             return NTYTLocalizedString(@"ui.list.content");
@@ -30,7 +30,7 @@ NSString *NTYTListTitle(NTYTListID listID) {
         case NTYTListIDPlaylistID:
             return NTYTLocalizedString(@"ui.list.playlist_id");
     }
-    return NTYTLocalizedString(@"ui.list.rules");
+    return NTYTLocalizedString(@"ui.list.rule");
 }
 
 NSString *NTYTCategoryTitle(NSUInteger categoryIndex) {

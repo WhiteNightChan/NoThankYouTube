@@ -4,10 +4,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 typedef NS_ENUM(NSUInteger, NTYTSettingsCategoryPage) {
     NTYTSettingsCategoryPageGeneral = 0,
-    NTYTSettingsCategoryPageVideos = 1,
-    NTYTSettingsCategoryPageChannels = 2,
-    NTYTSettingsCategoryPagePosts = 3,
-    NTYTSettingsCategoryPagePlaylists = 4,
+    NTYTSettingsCategoryPageVideo = 1,
+    NTYTSettingsCategoryPageChannel = 2,
+    NTYTSettingsCategoryPagePost = 3,
+    NTYTSettingsCategoryPagePlaylist = 4,
     NTYTSettingsCategoryPageGlobal = 5,
     NTYTSettingsCategoryPageOption = 6,
 };
