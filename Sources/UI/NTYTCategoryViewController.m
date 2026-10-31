@@ -1,8 +1,9 @@
 #import "NTYTCategoryViewController.h"
 
+#import "NTYTSettingsCell.h"
+#import "RuleList/NTYTRuleListViewController.h"
+
 #import "Core/NTYTListDefinition.h"
-#import "ListView/NTYTRuleListViewController.h"
-#import "ListView/NTYTLVTextCell.h"
 #import "Localization/NTYTUIStrings.h"
 #import "Localization/NTYTErrorStrings.h"
 #import "Persistence/NTYTSettingsCoordinator.h"
@@ -71,7 +72,7 @@
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.tableView.tableFooterView = [UIView new];
     self.tableView.rowHeight = UITableViewAutomaticDimension;
-    [self.tableView registerClass:NTYTLVTextCell.class
+    [self.tableView registerClass:NTYTSettingsCell.class
            forCellReuseIdentifier:@"NTYTCategoryCell"];
 
     self.navigationItem.hidesBackButton = YES;
@@ -160,7 +161,7 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView
          cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    NTYTLVTextCell *cell =
+    NTYTSettingsCell *cell =
         [tableView dequeueReusableCellWithIdentifier:@"NTYTCategoryCell"
                                         forIndexPath:indexPath];
     cell.accessoryView = nil;

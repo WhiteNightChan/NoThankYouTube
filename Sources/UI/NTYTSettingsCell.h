@@ -2,7 +2,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface NTYTLVTextCell : UITableViewCell
+@interface NTYTSettingsCell : UITableViewCell
 - (void)configureWithText:(NSString *)text;
 @end
 

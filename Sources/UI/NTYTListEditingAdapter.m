@@ -1,6 +1,7 @@
 #import "NTYTListEditingAdapter.h"
 
-#import "NTYTRuleListItem.h"
+#import "RuleList/NTYTRuleListItem.h"
+
 #import "Persistence/NTYTSettingsCoordinator.h"
 #import "Persistence/NTYTStoredSettings.h"
 

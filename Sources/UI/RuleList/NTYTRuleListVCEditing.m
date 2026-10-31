@@ -1,13 +1,151 @@
-#import "NTYTLVInputHelper.h"
-#import "NTYTLVPrivate.h"
-#import "NTYTLVSelectHelper.h"
+#import "NTYTRuleListVCEditing.h"
+
+#import "NTYTRuleListVCInternal.h"
+#import "NTYTRuleListItem.h"
+#import "NTYTRuleListState.h"
 #import "UI/NTYTListEditingAdapter.h"
-#import "UI/NTYTRuleListItem.h"
+
 #import "Localization/NTYTUIStrings.h"
 #import "Localization/NTYTErrorStrings.h"
+// Existing mutation result declarations; all requests use the editing Adapter.
 #import "Persistence/NTYTSettingsCoordinator.h"
 
-@implementation NTYTRuleListViewController (NTYTLVInputHelper)
+@implementation NTYTRuleListViewController (Editing)
+
+- (void)addButtonTapped {
+    if ([self currentListMutationsAllowed]) {
+        [self presentAddInputAlertWithDraft:nil diagnostic:nil];
+    }
+}
+
+- (void)editButtonTapped {
+    if (![self currentListMutationsAllowed]) {
+        return;
+    }
+    BOOL editing = !self.tableView.editing;
+    if (editing) {
+        [self.searchBar resignFirstResponder];
+    }
+    if (editing) {
+        [self.state clearSelection];
+        [self applySelectionProjectionToTableView];
+        [self.tableView setEditing:YES animated:YES];
+    } else {
+        [self leaveEditingModeClearingSelectionAnimated:YES];
+    }
+    [self.tableView beginUpdates];
+    [self.tableView endUpdates];
+    if (!editing && !self.tableView.editing) {
+        [self.tableView beginUpdates];
+        [self.tableView endUpdates];
+    }
+    [self refreshEditingModePresentationAnimated:YES];
+}
+
+- (void)leaveEditingModeClearingSelectionAnimated:(BOOL)animated {
+    [self.state clearSelection];
+    [self applySelectionProjectionToTableView];
+    [self.tableView setEditing:NO animated:animated];
+}
+
+- (void)selectAllButtonTapped {
+    if (!self.tableView.editing || ![self currentListMutationsAllowed]) {
+        return;
+    }
+    if (self.state.areAllVisibleItemsSelected) {
+        [self.state clearSelection];
+    } else {
+        [self.state selectAllVisibleItems];
+    }
+    [self applySelectionProjectionToTableView];
+    [self refreshSelectionPresentation];
+}
+
+- (void)beginEditingRuleItem:(NTYTRuleListItem *)item {
+    if ([self currentListMutationsAllowed]) {
+        [self presentEditInputAlertForItem:item draft:item.text diagnostic:nil];
+    }
+}
+
+- (void)requestDeleteRuleItem:(NTYTRuleListItem *)item {
+    NTYTMutationResult *result = [self.editingAdapter deleteIdentifier:item.identifier];
+    [self.state clearSelection];
+    [self reloadAuthoritativeStateAndRender];
+    if (!result.isSuccess) {
+        [self presentEditingFailureMessage:NTYTMutationErrorText(result)];
+    }
+}
+
+- (void)requestMoveRuleItem:(NTYTRuleListItem *)item toIndex:(NSUInteger)destinationIndex {
+    NSUInteger sourceIndex = NSNotFound;
+    for (NSUInteger index = 0; index < self.state.visibleItemCount; index++) {
+        NTYTRuleListItem *visibleItem = [self.state itemAtVisibleIndex:index];
+        if ([visibleItem.identifier isEqual:item.identifier]) {
+            sourceIndex = index;
+            break;
+        }
+    }
+    if (![self.state moveVisibleItemFromIndex:sourceIndex toIndex:destinationIndex]) {
+        [self reloadAuthoritativeStateAndRender];
+        return;
+    }
+
+    NTYTMutationResult *result =
+        [self.editingAdapter moveIdentifier:item.identifier toIndex:destinationIndex];
+    // Move preserves logical selection for success, no-op, and failure alike.
+    [self reloadAuthoritativeStateAndRender];
+    if (!result.isSuccess) {
+        [self presentEditingFailureMessage:NTYTMutationErrorText(result)];
+    }
+}
+
+- (void)deleteSelectedItemsTapped {
+    NSArray<NSUUID *> *selected = (self.tableView.editing ? [self.state selectedIdentifiersInVisibleOrder] : @[]);
+    if (selected.count == 0 || ![self currentListMutationsAllowed]) {
+        return;
+    }
+
+    NSString *expression = nil;
+    if (selected.count == 1) {
+        expression = [self.state itemWithIdentifier:selected.firstObject].text;
+    }
+
+    UIAlertController *alert =
+        [UIAlertController alertControllerWithTitle:NTYTDeleteTitle(selected.count)
+                                            message:NTYTDeleteMessage(selected.count, expression)
+                                     preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTDeleteActionTitle()
+                                              style:UIAlertActionStyleDestructive
+                                            handler:^(__unused UIAlertAction *action) {
+        [self performDeleteSelectedItems];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:NTYTCancelTitle()
+                                              style:UIAlertActionStyleCancel
+                                            handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)performDeleteSelectedItems {
+    NSInteger selectedCount = (self.tableView.editing ? self.state.selectedCount : 0);
+    if (selectedCount == 0) {
+        return;
+    }
+
+    NSArray<NSUUID *> *identifiers = [self.state selectedIdentifiersInVisibleOrder];
+    if (identifiers.count != selectedCount) {
+        [self.state clearSelection];
+        [self reloadAuthoritativeStateAndRender];
+        [self presentEditingFailureMessage:NTYTSelectionStaleText()];
+        return;
+    }
+
+    NTYTMutationResult *result = [self.editingAdapter deleteIdentifiers:identifiers];
+    [self.state clearSelection];
+    [self reloadAuthoritativeStateAndRender];
+    if (!result.isSuccess) {
+        [self presentEditingFailureMessage:NTYTMutationErrorText(result)];
+    }
+}
 
 - (UITextView *)configuredInputTextViewWithFrame:(CGRect)frame {
     UITextView *textView = [[UITextView alloc] initWithFrame:frame];
@@ -96,13 +234,6 @@
     return placeholder ? @"" : (textView.text ?: @"");
 }
 
-- (void)reloadAfterSuccessfulMutation {
-    [self loadItemsFromAuthoritativeSource];
-    [self clearEditingSelectionForSearchRefresh];
-    [self reloadListDataForCurrentState];
-    [self refreshListUIForCurrentState];
-}
-
 - (void)presentAddInputAlertWithDraft:(NSString *)draft diagnostic:(NSString *)diagnostic {
     UITextView *textView = nil;
     UIAlertController *alert = [self inputAlertWithTitle:NTYTAddTitle()
@@ -120,7 +251,8 @@
         NSString *rawDraft = [strongSelf rawDraftFromTextView:textView];
         NTYTMutationResult *result = [strongSelf.editingAdapter addRawExpression:rawDraft];
         if (result.isSuccess) {
-            [strongSelf reloadAfterSuccessfulMutation];
+            [strongSelf.state clearSelection];
+            [strongSelf reloadAuthoritativeStateAndRender];
         } else {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [strongSelf presentAddInputAlertWithDraft:rawDraft
@@ -154,7 +286,8 @@
         NTYTMutationResult *result =
             [strongSelf.editingAdapter editIdentifier:item.identifier rawExpression:rawDraft];
         if (result.isSuccess) {
-            [strongSelf reloadAfterSuccessfulMutation];
+            [strongSelf.state clearSelection];
+            [strongSelf reloadAuthoritativeStateAndRender];
         } else {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [strongSelf presentEditInputAlertForItem:item

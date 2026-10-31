@@ -1,10 +1,10 @@
-#import "NTYTLVTextCell.h"
+#import "NTYTSettingsCell.h"
 
-@interface NTYTLVTextCell ()
+@interface NTYTSettingsCell ()
 @property(nonatomic, strong) UILabel *itemLabel;
 @end
 
-@implementation NTYTLVTextCell
+@implementation NTYTSettingsCell
 
 - (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
     self = [super initWithStyle:UITableViewCellStyleDefault reuseIdentifier:reuseIdentifier];
