@@ -1,7 +1,10 @@
 #import "NTYTSectionCollectionAdapter.h"
 
-#import <YouTubeHeader/YTISectionListRenderer.h>
+#import <YouTubeHeader/YTIHorizontalListRenderer.h>
+#import <YouTubeHeader/YTIItemSectionRenderer.h>
 #import <YouTubeHeader/YTIShelfRenderer.h>
+#import <YouTubeHeader/YTIShelfSupportedRenderers.h>
+#import <YouTubeHeader/YTIVerticalListRenderer.h>
 
 #import "Core/NTYTRuntimeModel.h"
 #import "Core/NTYTSnapshotHolder.h"
@@ -103,33 +106,84 @@
             (unsigned long)blockedIndexes.count);
 }
 
-+ (void)filterShelfCandidateIfSupported:(YTIShelfRenderer *)candidate
-                               snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
-    if (![candidate respondsToSelector:@selector(content)]) return;
-    YTIShelfSupportedRenderers *content = candidate.content;
-    if (!content) return;
-
-    SEL hasVerticalSelector =
-        NSSelectorFromString(@"hasVerticalListRenderer");
-    SEL hasHorizontalSelector =
-        NSSelectorFromString(@"hasHorizontalListRenderer");
-
-    if (![content respondsToSelector:hasVerticalSelector] ||
-        ![content respondsToSelector:hasHorizontalSelector]) {
++ (void)filterHorizontalListRenderer:(YTIHorizontalListRenderer *)horizontal
+                               shelf:(YTIShelfRenderer *)shelf
+                            snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
+    if (!horizontal ||
+        ![horizontal respondsToSelector:@selector(itemsArray)]) {
         return;
     }
 
-    BOOL (*hasVerticalIMP)(id, SEL) =
-        (BOOL (*)(id, SEL))[content methodForSelector:hasVerticalSelector];
-    BOOL (*hasHorizontalIMP)(id, SEL) =
-        (BOOL (*)(id, SEL))[content methodForSelector:hasHorizontalSelector];
+    id itemsValue = horizontal.itemsArray;
+    if (![itemsValue isKindOfClass:[NSArray class]]) {
+        return;
+    }
 
-    if (!hasVerticalIMP || !hasHorizontalIMP) return;
+    NSArray *items = (NSArray *)itemsValue;
 
-    BOOL verticalPresent =
-        hasVerticalIMP(content, hasVerticalSelector);
-    BOOL horizontalPresent =
-        hasHorizontalIMP(content, hasHorizontalSelector);
+    BOOL removeHorizontalItems =
+        [NTYTProductionFilter shouldRemoveHorizontalListItems:items
+                                                     snapshot:snapshot];
+    if (!removeHorizontalItems) return;
+
+    if (![itemsValue respondsToSelector:@selector(removeObjectsAtIndexes:)]) {
+        NTYTLog(@"[FilterDiag] keep horizontal shelf: itemsArray is not mutable");
+        return;
+    }
+
+    if (![shelf respondsToSelector:@selector(setHeaderRenderer:)]) {
+        NTYTLog(@"[FilterDiag] keep horizontal shelf: setHeaderRenderer: unavailable");
+        return;
+    }
+
+    if (![shelf respondsToSelector:@selector(hasFooterRenderer)]) {
+        NTYTLog(@"[FilterDiag] keep horizontal shelf: hasFooterRenderer unavailable");
+        return;
+    }
+
+    BOOL footerPresent = shelf.hasFooterRenderer;
+
+    if (footerPresent &&
+        ![shelf respondsToSelector:@selector(setFooterRenderer:)]) {
+        NTYTLog(@"[FilterDiag] keep horizontal shelf: setFooterRenderer: unavailable");
+        return;
+    }
+
+    NSUInteger inputCount = items.count;
+    NSIndexSet *allIndexes =
+        [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, inputCount)];
+
+    [(NSMutableArray *)itemsValue removeObjectsAtIndexes:allIndexes];
+
+    NSUInteger retainedCount = [(NSArray *)itemsValue count];
+    if (retainedCount == 0) {
+        shelf.headerRenderer = nil;
+
+        if (footerPresent) {
+            shelf.footerRenderer = nil;
+        }
+    }
+
+    NTYTLog(@"[Filter] horizontal list empty commit: inputChildren=%lu retainedChildren=%lu removedChildren=%lu",
+            (unsigned long)inputCount,
+            (unsigned long)retainedCount,
+            (unsigned long)(inputCount - retainedCount));
+}
+
++ (void)filterShelfCandidateIfSupported:(YTIShelfRenderer *)candidate
+                               snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
+    if (![candidate respondsToSelector:@selector(content)]) return;
+
+    YTIShelfSupportedRenderers *content = candidate.content;
+    if (!content) return;
+
+    if (![content respondsToSelector:@selector(hasVerticalListRenderer)] ||
+        ![content respondsToSelector:@selector(hasHorizontalListRenderer)]) {
+        return;
+    }
+
+    BOOL verticalPresent = content.hasVerticalListRenderer;
+    BOOL horizontalPresent = content.hasHorizontalListRenderer;
 
     // A Shelf route must resolve uniquely before any direct mutation or whole-presentation commit.
     if (verticalPresent == horizontalPresent) return;
@@ -142,88 +196,9 @@
         return;
     }
 
-    YTIHorizontalListRenderer *horizontal = content.horizontalListRenderer;
-    if (!horizontal || ![horizontal respondsToSelector:@selector(itemsArray)]) return;
-    id items = horizontal.itemsArray;
-    if (![items isKindOfClass:[NSArray class]]) return;
-
-    BOOL removeHorizontalItems =
-        [NTYTProductionFilter shouldRemoveHorizontalListItems:(NSArray *)items
-                                                     snapshot:snapshot];
-    if (!removeHorizontalItems) return;
-
-    if (![items respondsToSelector:@selector(removeObjectsAtIndexes:)]) {
-        NTYTLog(@"[FilterDiag] keep horizontal shelf: itemsArray is not mutable");
-        return;
-    }
-
-    SEL setHeaderRendererSelector =
-        NSSelectorFromString(@"setHeaderRenderer:");
-    if (![candidate respondsToSelector:setHeaderRendererSelector]) {
-        NTYTLog(@"[FilterDiag] keep horizontal shelf: setHeaderRenderer: unavailable");
-        return;
-    }
-
-    void (*setHeaderRendererIMP)(id, SEL, id) =
-        (void (*)(id, SEL, id))[candidate methodForSelector:setHeaderRendererSelector];
-    if (!setHeaderRendererIMP) {
-        NTYTLog(@"[FilterDiag] keep horizontal shelf: setHeaderRenderer: IMP unavailable");
-        return;
-    }
-
-    SEL hasFooterRendererSelector =
-        NSSelectorFromString(@"hasFooterRenderer");
-    if (![candidate respondsToSelector:hasFooterRendererSelector]) {
-        NTYTLog(@"[FilterDiag] keep horizontal shelf: hasFooterRenderer unavailable");
-        return;
-    }
-
-    BOOL (*hasFooterRendererIMP)(id, SEL) =
-        (BOOL (*)(id, SEL))[candidate methodForSelector:hasFooterRendererSelector];
-    if (!hasFooterRendererIMP) {
-        NTYTLog(@"[FilterDiag] keep horizontal shelf: hasFooterRenderer IMP unavailable");
-        return;
-    }
-
-    BOOL footerPresent =
-        hasFooterRendererIMP(candidate, hasFooterRendererSelector);
-
-    SEL setFooterRendererSelector =
-        NSSelectorFromString(@"setFooterRenderer:");
-    void (*setFooterRendererIMP)(id, SEL, id) = NULL;
-
-    if (footerPresent) {
-        if (![candidate respondsToSelector:setFooterRendererSelector]) {
-            NTYTLog(@"[FilterDiag] keep horizontal shelf: setFooterRenderer: unavailable");
-            return;
-        }
-
-        setFooterRendererIMP =
-            (void (*)(id, SEL, id))[candidate methodForSelector:setFooterRendererSelector];
-        if (!setFooterRendererIMP) {
-            NTYTLog(@"[FilterDiag] keep horizontal shelf: setFooterRenderer: IMP unavailable");
-            return;
-        }
-    }
-
-    NSUInteger inputCount = [(NSArray *)items count];
-    NSIndexSet *allIndexes =
-        [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, inputCount)];
-
-    [(NSMutableArray *)items removeObjectsAtIndexes:allIndexes];
-
-    NSUInteger retainedCount = [(NSArray *)items count];
-    if (retainedCount == 0) {
-        setHeaderRendererIMP(candidate, setHeaderRendererSelector, nil);
-        if (footerPresent) {
-            setFooterRendererIMP(candidate, setFooterRendererSelector, nil);
-        }
-    }
-
-    NTYTLog(@"[Filter] horizontal list empty commit: inputChildren=%lu retainedChildren=%lu removedChildren=%lu",
-            (unsigned long)inputCount,
-            (unsigned long)retainedCount,
-            (unsigned long)(inputCount - retainedCount));
+    [self filterHorizontalListRenderer:content.horizontalListRenderer
+                                 shelf:candidate
+                              snapshot:snapshot];
 }
 
 + (void)filterSectionCollection:(NSArray *)sectionCollection {
