@@ -32,7 +32,7 @@
 "ui.block_option.from_youtube" = "Block \"From YouTube\" Cell";
 "ui.block_option.ad_supported_free_movie" = "Block Ad-Supported Free Movies";
 "ui.block_option.station" = "Block Station";
-"ui.block_option.cell_divider" = "Block Cell Dividers (Not Recommended)";
+"ui.block_option.cell_divider" = "Block Cell Dividers";
 "ui.option.generic" = "Option";
 "ui.lifecycle.absent" = "Absent";
 "ui.lifecycle.supported_valid" = "Supported / Valid";
@@ -68,6 +68,7 @@
 "ui.transfer.export.unavailable" = "Settings export is unavailable.";
 "ui.transfer.export.salvage_notice" = "Export includes accepted valid settings only.";
 "ui.transfer.export.picker_unavailable" = "Could not open the export file picker.";
+"ui.tweak.version" = "Version";
 "error.mutation.expression_not_text" = "The expression must be text.";
 "error.mutation.invalid_expression" = "The expression is invalid.";
 "error.mutation.duplicate_expression" = "The same raw expression already exists in this list.";

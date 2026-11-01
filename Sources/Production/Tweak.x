@@ -12,17 +12,8 @@
     @try {
         id originalValue = [self valueForKey:@"_sectionRenderers"];
         if ([originalValue isKindOfClass:[NSArray class]]) {
-            NSArray *original = (NSArray *)originalValue;
-            NSArray *filtered =
-                [NTYTSectionCollectionAdapter filteredSectionCollectionFromOriginal:original];
-            NTYTLog(@"[Hook] displaySections: input=%lu output=%lu outerChanged=%@",
-                    (unsigned long)original.count,
-                    (unsigned long)filtered.count,
-                    filtered != original ? @"YES" : @"NO");
-
-            if (filtered != original) {
-                [self setValue:filtered forKey:@"_sectionRenderers"];
-            }
+            NSArray *sectionRenderers = (NSArray *)originalValue;
+            [NTYTSectionCollectionAdapter filterSectionCollection:sectionRenderers];
         }
     } @catch (__unused NSException *exception) {
     }
@@ -30,15 +21,9 @@
 }
 
 - (void)addSectionsFromArray:(NSArray *)array {
-    NSArray *filtered =
-        [NTYTSectionCollectionAdapter filteredSectionCollectionFromOriginal:array];
+    [NTYTSectionCollectionAdapter filterSectionCollection:array];
 
-    NTYTLog(@"[Hook] addSectionsFromArray: input=%lu output=%lu outerChanged=%@",
-            (unsigned long)array.count,
-            (unsigned long)filtered.count,
-            filtered != array ? @"YES" : @"NO");
-
-    %orig(filtered);
+    %orig(array);
 }
 
 - (id)insertContents:(NSArray *)contents

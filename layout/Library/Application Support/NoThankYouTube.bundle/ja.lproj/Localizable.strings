@@ -32,7 +32,7 @@
 "ui.block_option.from_youtube" = "「YouTubeより」をブロック";
 "ui.block_option.ad_supported_free_movie" = "広告付き無料映画をブロック";
 "ui.block_option.station" = "ステーションをブロック";
-"ui.block_option.cell_divider" = "Cell Divider をブロック (非推奨)";
+"ui.block_option.cell_divider" = "Cell Divider をブロック";
 "ui.option.generic" = "オプション";
 "ui.lifecycle.absent" = "未作成";
 "ui.lifecycle.supported_valid" = "対応 / 正常";
@@ -68,6 +68,7 @@
 "ui.transfer.export.unavailable" = "設定のエクスポートは利用できません。";
 "ui.transfer.export.salvage_notice" = "エクスポートには、正常な設定のみが含まれます。";
 "ui.transfer.export.picker_unavailable" = "エクスポート用ファイルピッカーを開けませんでした。";
+"ui.tweak.version" = "バージョン";
 "error.mutation.expression_not_text" = "ルールはテキストである必要があります。";
 "error.mutation.invalid_expression" = "ルールが無効です。";
 "error.mutation.duplicate_expression" = "同じルールがこのリスト内に既に存在します。";

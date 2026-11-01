@@ -1,6 +1,8 @@
 #import "NTYTProductionFilter.h"
 
 #import <YouTubeHeader/YTIElementRenderer.h>
+#import <YouTubeHeader/YTIItemSectionSupportedRenderers.h>
+#import <YouTubeHeader/YTIVerticalListSupportedRenderers.h>
 
 #import "Core/NTYTContentMetadata.h"
 #import "Core/NTYTRuntimeModel.h"
@@ -9,10 +11,6 @@
 #import "Extraction/NTYTMetadataExtractor.h"
 #import "NTYTContentQualifier.h"
 #import "Debug/LogHelper.h"
-
-@interface NSObject (NTYTElementRendererAccess)
-- (nullable id)elementRenderer;
-@end
 
 static NSString *NTYTMetadataLogValue(NTYTMetadataValue *metadataValue) {
     switch (metadataValue.state) {
@@ -43,13 +41,38 @@ static NSString *NTYTChannelCollectionLogValue(NTYTChannelIdentityCollection *co
 @implementation NTYTProductionFilter
 
 + (nullable YTIElementRenderer *)elementRendererFromContentEntry:(id)entry {
-    if (![entry respondsToSelector:@selector(elementRenderer)]) {
-        NTYTLog(@"[FilterDiag] keep child: wrapper=%@ has no elementRenderer",
+    Class itemSectionWrapperClass =
+        NSClassFromString(@"YTIItemSectionSupportedRenderers");
+    Class verticalListWrapperClass =
+        NSClassFromString(@"YTIVerticalListSupportedRenderers");
+    YTIElementRenderer *element = nil;
+
+    if (itemSectionWrapperClass &&
+        [entry isKindOfClass:itemSectionWrapperClass]) {
+        YTIItemSectionSupportedRenderers *wrapper =
+            (YTIItemSectionSupportedRenderers *)entry;
+        if (![wrapper respondsToSelector:@selector(elementRenderer)]) {
+            NTYTLog(@"[FilterDiag] keep child: wrapper=%@ has no elementRenderer",
+                    NSStringFromClass([wrapper class]));
+            return nil;
+        }
+        element = wrapper.elementRenderer;
+    } else if (verticalListWrapperClass &&
+               [entry isKindOfClass:verticalListWrapperClass]) {
+        YTIVerticalListSupportedRenderers *wrapper =
+            (YTIVerticalListSupportedRenderers *)entry;
+        if (![wrapper respondsToSelector:@selector(elementRenderer)]) {
+            NTYTLog(@"[FilterDiag] keep child: wrapper=%@ has no elementRenderer",
+                    NSStringFromClass([wrapper class]));
+            return nil;
+        }
+        element = wrapper.elementRenderer;
+    } else {
+        NTYTLog(@"[FilterDiag] keep child: unsupported wrapper=%@",
                 entry ? NSStringFromClass([entry class]) : @"<nil>");
         return nil;
     }
 
-    id element = [entry elementRenderer];
     Class elementClass = NSClassFromString(@"YTIElementRenderer");
     if (!elementClass || ![element isKindOfClass:elementClass]) {
         NTYTLog(@"[FilterDiag] keep child: element=%@ expected=YTIElementRenderer",
@@ -57,7 +80,7 @@ static NSString *NTYTChannelCollectionLogValue(NTYTChannelIdentityCollection *co
         return nil;
     }
 
-    return (YTIElementRenderer *)element;
+    return element;
 }
 
 + (NTYTDecision)decisionForResolvedElement:(YTIElementRenderer *)element

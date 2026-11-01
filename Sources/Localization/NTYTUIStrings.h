@@ -36,6 +36,7 @@ FOUNDATION_EXPORT NSString *NTYTSelectionStaleText(void);
 
 FOUNDATION_EXPORT NSString *NTYTImportSettingsTitle(void);
 FOUNDATION_EXPORT NSString *NTYTExportSettingsTitle(void);
+FOUNDATION_EXPORT NSString *NTYTTweakVersionTitle(void);
 FOUNDATION_EXPORT NSString *NTYTImportSuccessText(void);
 FOUNDATION_EXPORT NSString *NTYTImportNoChangesText(void);
 FOUNDATION_EXPORT NSString *NTYTImportReplaceTitle(void);

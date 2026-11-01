@@ -4,7 +4,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface NTYTSectionCollectionAdapter : NSObject
 
-+ (NSArray *)filteredSectionCollectionFromOriginal:(NSArray *)originalCollection;
++ (void)filterSectionCollection:(NSArray *)sectionCollection;
 
 + (NSArray *)filteredStandaloneHorizontalContinuationContents:(NSArray *)contents;
 

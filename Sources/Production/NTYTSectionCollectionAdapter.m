@@ -30,35 +30,29 @@
     return blockedIndexes;
 }
 
-+ (BOOL)filterItemSectionCandidate:(YTIItemSectionRenderer *)section
++ (void)filterItemSectionCandidate:(YTIItemSectionRenderer *)section
                           snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
     id contentsValue = [section contentsArray];
     if (![contentsValue isKindOfClass:[NSArray class]]) {
         NTYTLog(@"[FilterDiag] keep section: contentsArray class=%@",
                 contentsValue ? NSStringFromClass([contentsValue class]) : @"<nil>");
-        return NO;
+        return;
     }
 
     NSArray *contents = (NSArray *)contentsValue;
     if (contents.count == 0) {
-        return NO;
+        return;
     }
 
     NSIndexSet *blockedIndexes =
         [self blockedIndexesForEntries:contents snapshot:snapshot];
     if (blockedIndexes.count == 0) {
-        return NO;
-    }
-
-    if (blockedIndexes.count == contents.count) {
-        NTYTLog(@"[Filter] remove section: all %lu children blocked",
-                (unsigned long)contents.count);
-        return YES;
+        return;
     }
 
     if (![contentsValue respondsToSelector:@selector(removeObjectsAtIndexes:)]) {
         NTYTLog(@"[FilterDiag] keep section: contentsArray is not mutable");
-        return NO;
+        return;
     }
 
     NSUInteger inputCount = contents.count;
@@ -68,8 +62,6 @@
             (unsigned long)inputCount,
             (unsigned long)[(NSArray *)contentsValue count],
             (unsigned long)blockedIndexes.count);
-
-    return NO;
 }
 
 + (void)filterVerticalListRenderer:(YTIVerticalListRenderer *)verticalListRenderer
@@ -111,11 +103,11 @@
             (unsigned long)blockedIndexes.count);
 }
 
-+ (BOOL)filterShelfCandidateIfSupported:(YTIShelfRenderer *)candidate
++ (void)filterShelfCandidateIfSupported:(YTIShelfRenderer *)candidate
                                snapshot:(NTYTRuntimeSettingsSnapshot *)snapshot {
-    if (![candidate respondsToSelector:@selector(content)]) return NO;
+    if (![candidate respondsToSelector:@selector(content)]) return;
     YTIShelfSupportedRenderers *content = candidate.content;
-    if (!content) return NO;
+    if (!content) return;
 
     SEL hasVerticalSelector =
         NSSelectorFromString(@"hasVerticalListRenderer");
@@ -124,7 +116,7 @@
 
     if (![content respondsToSelector:hasVerticalSelector] ||
         ![content respondsToSelector:hasHorizontalSelector]) {
-        return NO;
+        return;
     }
 
     BOOL (*hasVerticalIMP)(id, SEL) =
@@ -132,84 +124,102 @@
     BOOL (*hasHorizontalIMP)(id, SEL) =
         (BOOL (*)(id, SEL))[content methodForSelector:hasHorizontalSelector];
 
-    if (!hasVerticalIMP || !hasHorizontalIMP) return NO;
+    if (!hasVerticalIMP || !hasHorizontalIMP) return;
 
     BOOL verticalPresent =
         hasVerticalIMP(content, hasVerticalSelector);
     BOOL horizontalPresent =
         hasHorizontalIMP(content, hasHorizontalSelector);
 
-    // A Shelf route must resolve uniquely before any direct mutation or whole-Shelf commit.
-    if (verticalPresent == horizontalPresent) return NO;
+    // A Shelf route must resolve uniquely before any direct mutation or whole-presentation commit.
+    if (verticalPresent == horizontalPresent) return;
 
     if (verticalPresent) {
         YTIVerticalListRenderer *vertical = content.verticalListRenderer;
-        if (!vertical) return NO;
+        if (!vertical) return;
 
         [self filterVerticalListRenderer:vertical snapshot:snapshot];
-        return NO;
+        return;
     }
 
     YTIHorizontalListRenderer *horizontal = content.horizontalListRenderer;
-    if (!horizontal || ![horizontal respondsToSelector:@selector(itemsArray)]) return NO;
+    if (!horizontal || ![horizontal respondsToSelector:@selector(itemsArray)]) return;
     id items = horizontal.itemsArray;
-    if (![items isKindOfClass:[NSArray class]]) return NO;
-    return [NTYTProductionFilter shouldRemoveHorizontalListItems:(NSArray *)items snapshot:snapshot];
+    if (![items isKindOfClass:[NSArray class]]) return;
+
+    BOOL removeHorizontalItems =
+        [NTYTProductionFilter shouldRemoveHorizontalListItems:(NSArray *)items
+                                                     snapshot:snapshot];
+    if (!removeHorizontalItems) return;
+
+    if (![items respondsToSelector:@selector(removeObjectsAtIndexes:)]) {
+        NTYTLog(@"[FilterDiag] keep horizontal shelf: itemsArray is not mutable");
+        return;
+    }
+
+    SEL setHeaderRendererSelector =
+        NSSelectorFromString(@"setHeaderRenderer:");
+    if (![candidate respondsToSelector:setHeaderRendererSelector]) {
+        NTYTLog(@"[FilterDiag] keep horizontal shelf: setHeaderRenderer: unavailable");
+        return;
+    }
+
+    void (*setHeaderRendererIMP)(id, SEL, id) =
+        (void (*)(id, SEL, id))[candidate methodForSelector:setHeaderRendererSelector];
+    if (!setHeaderRendererIMP) {
+        NTYTLog(@"[FilterDiag] keep horizontal shelf: setHeaderRenderer: IMP unavailable");
+        return;
+    }
+
+    NSUInteger inputCount = [(NSArray *)items count];
+    NSIndexSet *allIndexes =
+        [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, inputCount)];
+
+    [(NSMutableArray *)items removeObjectsAtIndexes:allIndexes];
+
+    NSUInteger retainedCount = [(NSArray *)items count];
+    if (retainedCount == 0) {
+        setHeaderRendererIMP(candidate, setHeaderRendererSelector, nil);
+    }
+
+    NTYTLog(@"[Filter] horizontal list empty commit: inputChildren=%lu retainedChildren=%lu removedChildren=%lu",
+            (unsigned long)inputCount,
+            (unsigned long)retainedCount,
+            (unsigned long)(inputCount - retainedCount));
 }
 
-+ (NSArray *)filteredSectionCollectionFromOriginal:(NSArray *)originalCollection {
-    if (![originalCollection isKindOfClass:[NSArray class]] || originalCollection.count == 0) {
-        return originalCollection;
++ (void)filterSectionCollection:(NSArray *)sectionCollection {
+    if (![sectionCollection isKindOfClass:[NSArray class]] || sectionCollection.count == 0) {
+        return;
     }
 
     @try {
         NTYTRuntimeSettingsSnapshot *snapshot =
             [[NTYTSnapshotHolder sharedHolder] currentSnapshot];
         if (!snapshot) {
-            return originalCollection;
+            return;
         }
 
         Class itemSectionClass = NSClassFromString(@"YTIItemSectionRenderer");
         Class shelfClass = NSClassFromString(@"YTIShelfRenderer");
 
-        NSMutableArray *filtered =
-            [NSMutableArray arrayWithCapacity:originalCollection.count];
-        BOOL removedAnyOuterSection = NO;
-
-        for (id candidate in originalCollection) {
-            BOOL removeCandidate = NO;
-
+        for (id candidate in sectionCollection) {
             @try {
                 if (itemSectionClass && [candidate isKindOfClass:itemSectionClass]) {
-                    removeCandidate =
-                        [self filterItemSectionCandidate:(YTIItemSectionRenderer *)candidate
-                                                snapshot:snapshot];
+                    [self filterItemSectionCandidate:(YTIItemSectionRenderer *)candidate
+                                            snapshot:snapshot];
                 } else if (shelfClass && [candidate isKindOfClass:shelfClass]) {
-                    removeCandidate = [self filterShelfCandidateIfSupported:(YTIShelfRenderer *)candidate
-                                                                    snapshot:snapshot];
+                    [self filterShelfCandidateIfSupported:(YTIShelfRenderer *)candidate
+                                                  snapshot:snapshot];
                 }
             } @catch (NSException *candidateException) {
                 NTYTLog(@"[Filter] section candidate fail-open: %@",
                         candidateException.reason ?: @"<unknown>");
-                removeCandidate = NO;
-            }
-
-            if (removeCandidate) {
-                removedAnyOuterSection = YES;
-            } else {
-                [filtered addObject:candidate];
             }
         }
-
-        if (!removedAnyOuterSection) {
-            return originalCollection;
-        }
-
-        return filtered;
     } @catch (NSException *containerException) {
         NTYTLog(@"[Filter] section collection fail-open: %@",
                 containerException.reason ?: @"<unknown>");
-        return originalCollection;
     }
 }
 

@@ -1,22 +1,10 @@
 #import "NTYTContentQualifier.h"
 
 #import <YouTubeHeader/YTIElementRenderer.h>
+#import <YouTubeHeader/YTIHorizontalListSupportedRenderers.h>
 
 #import "Extraction/NTYTElementQualificationPrivate.h"
 #import "Extraction/NTYTProtobufReader.h"
-
-@interface YTIElementRenderer (NTYTQualificationDataAccess)
-- (NSData * _Nullable)elementData;
-@end
-
-@interface YTIElementRendererCompatibilityOptions (NTYTQualification)
-- (BOOL)useVideoCellControllerOnIos;
-- (BOOL)useBackstageCellControllerOnIos;
-@end
-
-@interface NSObject (NTYTShortsShelfWrapperAccess)
-- (nullable id)elementRenderer;
-@end
 
 @implementation NTYTElementQualification
 
@@ -360,13 +348,19 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
     if (items.count == 0) {
         return NTYTShortsShelfQualification(NTYTPresentationQualificationNotConfirmed);
     }
+    Class wrapperClass = NSClassFromString(@"YTIHorizontalListSupportedRenderers");
     Class elementClass = NSClassFromString(@"YTIElementRenderer");
     BOOL allCellsConfirmed = YES;
-    for (id wrapper in items) {
+    for (id entry in items) {
+        if (!wrapperClass || ![entry isKindOfClass:wrapperClass]) {
+            return NTYTShortsShelfQualification(NTYTPresentationQualificationUnavailable);
+        }
+        YTIHorizontalListSupportedRenderers *wrapper =
+            (YTIHorizontalListSupportedRenderers *)entry;
         if (![wrapper respondsToSelector:@selector(elementRenderer)]) {
             return NTYTShortsShelfQualification(NTYTPresentationQualificationUnavailable);
         }
-        id element = [wrapper elementRenderer];
+        YTIElementRenderer *element = wrapper.elementRenderer;
         if (!elementClass || ![element isKindOfClass:elementClass] ||
             ![element respondsToSelector:@selector(elementData)]) {
             return NTYTShortsShelfQualification(NTYTPresentationQualificationUnavailable);

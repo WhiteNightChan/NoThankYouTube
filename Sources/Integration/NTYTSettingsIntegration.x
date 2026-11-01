@@ -1,7 +1,14 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import <objc/message.h>
-#import <objc/runtime.h>
+
+#import <YouTubeHeader/YTIIcon.h>
+#import <YouTubeHeader/YTAppSettingsGroupPresentationData.h>
+#import <YouTubeHeader/YTAppSettingsPresentationData.h>
+#import <YouTubeHeader/YTSettingsCell.h>
+#import <YouTubeHeader/YTSettingsGroupData.h>
+#import <YouTubeHeader/YTSettingsSectionItem.h>
+#import <YouTubeHeader/YTSettingsSectionItemManager.h>
+#import <YouTubeHeader/YTSettingsViewController.h>
 
 #import "Debug/LogHelper.h"
 #import "UI/NTYTCategoryViewController.h"
@@ -10,32 +17,8 @@
 
 static const NSInteger NTYTSettingsCategory = 'ntyt';
 
-@interface YTSettingsGroupData : NSObject
-@property(nonatomic, readonly) NSUInteger type;
+@interface YTSettingsGroupData (NTYTYouGroupSettings)
 + (NSMutableArray<NSNumber *> *)tweaks;
-- (NSArray<NSNumber *> *)orderedCategories;
-@end
-
-@interface YTSettingsSectionItem : NSObject
-+ (instancetype)itemWithTitle:(NSString *)title
-             titleDescription:(nullable NSString *)titleDescription
-       accessibilityIdentifier:(nullable NSString *)accessibilityIdentifier
-               detailTextBlock:(nullable id)detailTextBlock
-                   selectBlock:(BOOL (^)(id cell, NSUInteger argument))selectBlock;
-@end
-
-@interface NSObject (NTYTSettingsSectionInstalling)
-- (void)setSectionItems:(NSArray *)items
-            forCategory:(NSInteger)category
-                  title:(NSString *)title
-                   icon:(nullable UIImage *)icon
-       titleDescription:(nullable NSString *)titleDescription
-           headerHidden:(BOOL)headerHidden;
-- (void)setSectionItems:(NSArray *)items
-            forCategory:(NSInteger)category
-                  title:(NSString *)title
-       titleDescription:(nullable NSString *)titleDescription
-           headerHidden:(BOOL)headerHidden;
 @end
 
 static NSArray<NSNumber *> *NTYTArrayByAddingCategoryOnce(NSArray<NSNumber *> *original) {
@@ -52,22 +35,20 @@ static NSArray<NSNumber *> *NTYTArrayByAddingCategoryOnce(NSArray<NSNumber *> *o
 }
 
 static BOOL NTYTYouGroupSettingsIsPresent(void) {
-    Class groupDataClass = NSClassFromString(@"YTSettingsGroupData");
+    Class groupDataClass = %c(YTSettingsGroupData);
     return groupDataClass &&
-        class_getClassMethod(groupDataClass, @selector(tweaks)) != NULL;
+        [groupDataClass respondsToSelector:@selector(tweaks)];
 }
 
 static void NTYTRegisterWithYouGroupSettingsIfAvailable(void) {
-    Class groupDataClass = NSClassFromString(@"YTSettingsGroupData");
-    SEL selector = @selector(tweaks);
+    Class groupDataClass = %c(YTSettingsGroupData);
 
     if (!groupDataClass ||
-        class_getClassMethod(groupDataClass, selector) == NULL) {
+        ![groupDataClass respondsToSelector:@selector(tweaks)]) {
         return;
     }
 
-    typedef id (*TweaksGetter)(id, SEL);
-    id value = ((TweaksGetter)objc_msgSend)(groupDataClass, selector);
+    id value = [groupDataClass tweaks];
     if (![value isKindOfClass:[NSMutableArray class]]) {
         return;
     }
@@ -90,8 +71,8 @@ static UIViewController *NTYTViewControllerFromResponder(id object) {
     return nil;
 }
 
-static id NTYTSectionItemForPage(NTYTSettingsCategoryPage page) {
-    Class itemClass = NSClassFromString(@"YTSettingsSectionItem");
+static YTSettingsSectionItem *NTYTSectionItemForPage(NTYTSettingsCategoryPage page) {
+    Class itemClass = %c(YTSettingsSectionItem);
     SEL selector = @selector(itemWithTitle:titleDescription:accessibilityIdentifier:detailTextBlock:selectBlock:);
 
     BOOL selectorAvailable =
@@ -107,7 +88,8 @@ static id NTYTSectionItemForPage(NTYTSettingsCategoryPage page) {
     }
 
     NSString *title = NTYTCategoryTitle(page);
-    BOOL (^selectBlock)(id, NSUInteger) = ^BOOL(id cell, __unused NSUInteger argument) {
+    BOOL (^selectBlock)(YTSettingsCell *, NSUInteger) =
+        ^BOOL(YTSettingsCell *cell, __unused NSUInteger argument) {
         UIViewController *source = NTYTViewControllerFromResponder(cell);
         UINavigationController *navigationController = source.navigationController;
         if (!navigationController) {
@@ -119,14 +101,12 @@ static id NTYTSectionItemForPage(NTYTSettingsCategoryPage page) {
         return YES;
     };
 
-    typedef id (*ItemFactory)(id, SEL, id, id, id, id, id);
-    id item = ((ItemFactory)objc_msgSend)(itemClass,
-                                         selector,
-                                         title,
-                                         nil,
-                                         [NSString stringWithFormat:@"ntyt.%lu", (unsigned long)page],
-                                         nil,
-                                         [selectBlock copy]);
+    YTSettingsSectionItem *item =
+        [itemClass itemWithTitle:title
+               titleDescription:nil
+         accessibilityIdentifier:[NSString stringWithFormat:@"ntyt.%lu", (unsigned long)page]
+                 detailTextBlock:nil
+                     selectBlock:[selectBlock copy]];
 
     NTYTLog(@"[SettingsIntegration] item factory page=%lu result=%@",
             (unsigned long)page,
@@ -135,14 +115,15 @@ static id NTYTSectionItemForPage(NTYTSettingsCategoryPage page) {
     return item;
 }
 
-static id NTYTSectionItemForTransferAction(BOOL importAction) {
-    Class itemClass = NSClassFromString(@"YTSettingsSectionItem");
+static YTSettingsSectionItem *NTYTSectionItemForTransferAction(BOOL importAction) {
+    Class itemClass = %c(YTSettingsSectionItem);
     SEL selector = @selector(itemWithTitle:titleDescription:accessibilityIdentifier:detailTextBlock:selectBlock:);
     if (!itemClass || ![itemClass respondsToSelector:selector]) {
         return nil;
     }
 
-    BOOL (^selectBlock)(id, NSUInteger) = ^BOOL(id cell, __unused NSUInteger argument) {
+    BOOL (^selectBlock)(YTSettingsCell *, NSUInteger) =
+        ^BOOL(YTSettingsCell *cell, __unused NSUInteger argument) {
         UIViewController *source = NTYTViewControllerFromResponder(cell);
         if (!source) {
             return NO;
@@ -154,12 +135,28 @@ static id NTYTSectionItemForTransferAction(BOOL importAction) {
         }
         return YES;
     };
-    typedef id (*ItemFactory)(id, SEL, id, id, id, id, id);
-    return ((ItemFactory)objc_msgSend)(itemClass, selector,
-                                      importAction ? NTYTImportSettingsTitle() : NTYTExportSettingsTitle(),
-                                      nil,
-                                      importAction ? @"ntyt.import" : @"ntyt.export",
-                                      nil, [selectBlock copy]);
+
+    return [itemClass itemWithTitle:importAction ? NTYTImportSettingsTitle() : NTYTExportSettingsTitle()
+                  titleDescription:nil
+            accessibilityIdentifier:importAction ? @"ntyt.import" : @"ntyt.export"
+                    detailTextBlock:nil
+                        selectBlock:[selectBlock copy]];
+}
+
+static YTSettingsSectionItem *NTYTSectionItemForVersion(void) {
+    Class itemClass = %c(YTSettingsSectionItem);
+    SEL selector = @selector(itemWithTitle:titleDescription:accessibilityIdentifier:detailTextBlock:selectBlock:);
+    if (!itemClass || ![itemClass respondsToSelector:selector]) {
+        return nil;
+    }
+
+    return [itemClass itemWithTitle:NTYTTweakVersionTitle()
+                  titleDescription:nil
+            accessibilityIdentifier:@"ntyt.version"
+                    detailTextBlock:^NSString *{
+                        return NTYT_PACKAGE_VERSION;
+                    }
+                        selectBlock:nil];
 }
 
 static id NTYTObjectForKeySafely(id object, NSString *key) {
@@ -212,18 +209,29 @@ static id NTYTSettingsViewControllerCandidate(id manager, id entry) {
 }
 
 static BOOL NTYTInstallSettingsSection(id manager, id entry) {
-    id general = NTYTSectionItemForPage(NTYTSettingsCategoryPageGeneral);
-    id videoItem = NTYTSectionItemForPage(NTYTSettingsCategoryPageVideo);
-    id channelItem = NTYTSectionItemForPage(NTYTSettingsCategoryPageChannel);
-    id postItem = NTYTSectionItemForPage(NTYTSettingsCategoryPagePost);
-    id playlistItem = NTYTSectionItemForPage(NTYTSettingsCategoryPagePlaylist);
-    id global = NTYTSectionItemForPage(NTYTSettingsCategoryPageGlobal);
-    id optionItem = NTYTSectionItemForPage(NTYTSettingsCategoryPageOption);
-    id importSettings = NTYTSectionItemForTransferAction(YES);
-    id exportSettings = NTYTSectionItemForTransferAction(NO);
+    YTSettingsSectionItem *general =
+        NTYTSectionItemForPage(NTYTSettingsCategoryPageGeneral);
+    YTSettingsSectionItem *videoItem =
+        NTYTSectionItemForPage(NTYTSettingsCategoryPageVideo);
+    YTSettingsSectionItem *channelItem =
+        NTYTSectionItemForPage(NTYTSettingsCategoryPageChannel);
+    YTSettingsSectionItem *postItem =
+        NTYTSectionItemForPage(NTYTSettingsCategoryPagePost);
+    YTSettingsSectionItem *playlistItem =
+        NTYTSectionItemForPage(NTYTSettingsCategoryPagePlaylist);
+    YTSettingsSectionItem *global =
+        NTYTSectionItemForPage(NTYTSettingsCategoryPageGlobal);
+    YTSettingsSectionItem *optionItem =
+        NTYTSectionItemForPage(NTYTSettingsCategoryPageOption);
+    YTSettingsSectionItem *importSettings =
+        NTYTSectionItemForTransferAction(YES);
+    YTSettingsSectionItem *exportSettings =
+        NTYTSectionItemForTransferAction(NO);
+    YTSettingsSectionItem *versionItem =
+        NTYTSectionItemForVersion();
 
     if (!general || !videoItem || !channelItem || !postItem || !playlistItem || !global || !optionItem ||
-        !importSettings || !exportSettings) {
+        !importSettings || !exportSettings || !versionItem) {
         NTYTLog(@"[SettingsIntegration] install failed: section items general=%@ videos=%@ channels=%@ posts=%@ playlists=%@ global=%@",
                 general ? @"OK" : @"nil",
                 videoItem ? @"OK" : @"nil",
@@ -240,23 +248,25 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
         return NO;
     }
 
-    NSArray *items = @[global, channelItem, general, videoItem, postItem, playlistItem, optionItem,
-                       importSettings, exportSettings];
+    NSMutableArray<YTSettingsSectionItem *> *items =
+        [@[global, channelItem, general, videoItem, postItem, playlistItem, optionItem,
+           importSettings, exportSettings, versionItem] mutableCopy];
 
     SEL modern = @selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:);
     if ([controller respondsToSelector:modern]) {
         NTYTLog(@"[SettingsIntegration] install using modern setter controller=%@",
                 NSStringFromClass([controller class]));
 
-        typedef void (*ModernSetter)(id, SEL, id, NSInteger, id, id, id, BOOL);
-        ((ModernSetter)objc_msgSend)(controller,
-                                    modern,
-                                    items,
-                                    NTYTSettingsCategory,
-                                    NTYTAppName(),
-                                    nil,
-                                    nil,
-                                    NO);
+        Class iconClass = %c(YTIIcon);
+        YTIIcon *icon = [iconClass new];
+        icon.iconType = (YTIcon)433; // YTIcons: NOT_INTERESTED
+
+        [controller setSectionItems:items
+                       forCategory:NTYTSettingsCategory
+                             title:NTYTAppName()
+                              icon:icon
+                  titleDescription:nil
+                      headerHidden:NO];
         return YES;
     }
 
@@ -265,14 +275,11 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
         NTYTLog(@"[SettingsIntegration] install using legacy setter controller=%@",
                 NSStringFromClass([controller class]));
 
-        typedef void (*LegacySetter)(id, SEL, id, NSInteger, id, id, BOOL);
-        ((LegacySetter)objc_msgSend)(controller,
-                                    legacy,
-                                    items,
-                                    NTYTSettingsCategory,
-                                    NTYTAppName(),
-                                    nil,
-                                    NO);
+        [controller setSectionItems:items
+                       forCategory:NTYTSettingsCategory
+                             title:NTYTAppName()
+                  titleDescription:nil
+                      headerHidden:NO];
         return YES;
     }
 
@@ -294,7 +301,8 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
 
 %hook YTSettingsSectionItemManager
 
-- (void)updateSectionForCategory:(NSInteger)category withEntry:(id)entry {
+- (void)updateSectionForCategory:(NSUInteger)category
+                       withEntry:(id)entry {
     if (category == NTYTSettingsCategory) {
         BOOL installed = NTYTInstallSettingsSection(self, entry);
 
@@ -318,7 +326,7 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
 
 %hook YTAppSettingsGroupPresentationData
 
-+ (NSArray *)orderedGroups {
++ (NSArray<YTSettingsGroupData *> *)orderedGroups {
     NTYTRegisterWithYouGroupSettingsIfAvailable();
     return %orig;
 }

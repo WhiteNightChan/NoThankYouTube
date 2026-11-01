@@ -123,6 +123,7 @@ NSString *NTYTCopiedRuleText(NSString *expression) {
 
 NSString *NTYTImportSettingsTitle(void) { return NTYTLocalizedString(@"ui.transfer.import.title"); }
 NSString *NTYTExportSettingsTitle(void) { return NTYTLocalizedString(@"ui.transfer.export.title"); }
+NSString *NTYTTweakVersionTitle(void) { return NTYTLocalizedString(@"ui.tweak.version"); }
 NSString *NTYTImportSuccessText(void) { return NTYTLocalizedString(@"ui.transfer.import.success"); }
 NSString *NTYTImportNoChangesText(void) { return NTYTLocalizedString(@"ui.transfer.import.no_changes"); }
 NSString *NTYTImportReplaceTitle(void) { return NTYTLocalizedString(@"ui.transfer.import.replace_title"); }
