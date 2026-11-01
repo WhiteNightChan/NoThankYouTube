@@ -171,6 +171,41 @@
         return;
     }
 
+    SEL hasFooterRendererSelector =
+        NSSelectorFromString(@"hasFooterRenderer");
+    if (![candidate respondsToSelector:hasFooterRendererSelector]) {
+        NTYTLog(@"[FilterDiag] keep horizontal shelf: hasFooterRenderer unavailable");
+        return;
+    }
+
+    BOOL (*hasFooterRendererIMP)(id, SEL) =
+        (BOOL (*)(id, SEL))[candidate methodForSelector:hasFooterRendererSelector];
+    if (!hasFooterRendererIMP) {
+        NTYTLog(@"[FilterDiag] keep horizontal shelf: hasFooterRenderer IMP unavailable");
+        return;
+    }
+
+    BOOL footerPresent =
+        hasFooterRendererIMP(candidate, hasFooterRendererSelector);
+
+    SEL setFooterRendererSelector =
+        NSSelectorFromString(@"setFooterRenderer:");
+    void (*setFooterRendererIMP)(id, SEL, id) = NULL;
+
+    if (footerPresent) {
+        if (![candidate respondsToSelector:setFooterRendererSelector]) {
+            NTYTLog(@"[FilterDiag] keep horizontal shelf: setFooterRenderer: unavailable");
+            return;
+        }
+
+        setFooterRendererIMP =
+            (void (*)(id, SEL, id))[candidate methodForSelector:setFooterRendererSelector];
+        if (!setFooterRendererIMP) {
+            NTYTLog(@"[FilterDiag] keep horizontal shelf: setFooterRenderer: IMP unavailable");
+            return;
+        }
+    }
+
     NSUInteger inputCount = [(NSArray *)items count];
     NSIndexSet *allIndexes =
         [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, inputCount)];
@@ -180,6 +215,9 @@
     NSUInteger retainedCount = [(NSArray *)items count];
     if (retainedCount == 0) {
         setHeaderRendererIMP(candidate, setHeaderRendererSelector, nil);
+        if (footerPresent) {
+            setFooterRendererIMP(candidate, setFooterRendererSelector, nil);
+        }
     }
 
     NTYTLog(@"[Filter] horizontal list empty commit: inputChildren=%lu retainedChildren=%lu removedChildren=%lu",
