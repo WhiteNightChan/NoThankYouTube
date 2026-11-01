@@ -3,6 +3,7 @@
 #import <YouTubeHeader/YTIElementRenderer.h>
 #import <YouTubeHeader/YTIHorizontalListSupportedRenderers.h>
 
+#import "Debug/LogHelper.h"
 #import "Extraction/NTYTElementQualificationPrivate.h"
 #import "Extraction/NTYTProtobufReader.h"
 
@@ -116,6 +117,47 @@ static NTYTPresentationQualification NTYTPresentationForMessages(NSArray<NSData 
     if (!messages) return NTYTPresentationQualificationUnavailable;
     return messages.count > 0 ? NTYTPresentationQualificationConfirmed
                               : NTYTPresentationQualificationNotConfirmed;
+}
+
+static NSString *NTYTPresentationQualificationLogName(
+    NTYTPresentationQualification qualification) {
+    switch (qualification) {
+        case NTYTPresentationQualificationNotConfirmed:
+            return @"NotConfirmed";
+        case NTYTPresentationQualificationConfirmed:
+            return @"Confirmed";
+        case NTYTPresentationQualificationUnavailable:
+            return @"Unavailable";
+    }
+    return @"Invalid";
+}
+
+static NTYTPresentationQualification NTYTCellDividerQualification(NSData *data) {
+    NTYTPresentationQualification divider =
+        NTYTPresentationForMessages(
+            NTYTSafeMessages(data, @[@1, @168777401, @5, @347043917]));
+    NTYTPresentationQualification spacing =
+        NTYTPresentationForMessages(
+            NTYTSafeMessages(data, @[@1, @168777401, @5, @244010342]));
+
+    NTYTPresentationQualification result = NTYTPresentationQualificationNotConfirmed;
+    if (divider == NTYTPresentationQualificationConfirmed ||
+        spacing == NTYTPresentationQualificationConfirmed) {
+        result = NTYTPresentationQualificationConfirmed;
+    } else if (divider == NTYTPresentationQualificationUnavailable ||
+               spacing == NTYTPresentationQualificationUnavailable) {
+        result = NTYTPresentationQualificationUnavailable;
+    }
+
+    if (divider != NTYTPresentationQualificationNotConfirmed ||
+        spacing != NTYTPresentationQualificationNotConfirmed) {
+        NTYTLog(@"[QualDiag] cellDivider divider=%@ spacing=%@ aggregate=%@",
+                NTYTPresentationQualificationLogName(divider),
+                NTYTPresentationQualificationLogName(spacing),
+                NTYTPresentationQualificationLogName(result));
+    }
+
+    return result;
 }
 
 static NTYTPresentationQualification NTYTAdSupportedFreeMovieQualification(NSData *data) {
@@ -299,8 +341,7 @@ static NTYTSemanticQualificationResult *NTYTShortsShelfQualification(NTYTPresent
         fromYouTube = NTYTPresentationForMessages(NTYTSafeMessages(data, @[@1, @168777401, @5, @400581496]));
         BOOL fromYouTubeVideo = fromYouTube == NTYTPresentationQualificationConfirmed;
         freeMovie = NTYTAdSupportedFreeMovieQualification(data);
-        cellDivider = NTYTPresentationForMessages(
-            NTYTSafeMessages(data, @[@1, @168777401, @5, @347043917]));
+        cellDivider = NTYTCellDividerQualification(data);
         BOOL video = standardVideo || fromYouTubeVideo ||
                      freeMovie == NTYTPresentationQualificationConfirmed;
         NTYTPlaylistFamilyEvaluation playlistEvaluation = NTYTEvaluatePlaylistFamily(data);
