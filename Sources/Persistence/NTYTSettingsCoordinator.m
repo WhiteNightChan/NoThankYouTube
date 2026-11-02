@@ -12,6 +12,22 @@
 
 static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 
+static BOOL NTYTIsValidBlockOptionID(NTYTBlockOptionID optionID) {
+    switch (optionID) {
+        case NTYTBlockOptionIDShorts:
+        case NTYTBlockOptionIDPost:
+        case NTYTBlockOptionIDPlaylist:
+        case NTYTBlockOptionIDMix:
+        case NTYTBlockOptionIDHorizontalShelf:
+        case NTYTBlockOptionIDFromYouTube:
+        case NTYTBlockOptionIDAdSupportedFreeMovie:
+        case NTYTBlockOptionIDCellDivider:
+        case NTYTBlockOptionIDStation:
+            return YES;
+    }
+    return NO;
+}
+
 @interface NTYTMutationResult ()
 
 - (instancetype)initWithSuccess:(BOOL)success
@@ -264,7 +280,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
 - (BOOL)effectiveValueForBlockOption:(NTYTBlockOptionID)optionID {
     __block BOOL value = NO;
     [self performSynchronous:^{
-        if (optionID < NTYTBlockOptionIDShorts || optionID > NTYTBlockOptionIDStation) return;
+        if (!NTYTIsValidBlockOptionID(optionID)) return;
         value = [self.committedSettings.blockOptionState valueForOption:optionID];
     }];
     return value;
@@ -531,7 +547,7 @@ static void *NTYTSettingsQueueKey = &NTYTSettingsQueueKey;
                                         underlyingError:nil];
             return;
         }
-        if (optionID < NTYTBlockOptionIDShorts || optionID > NTYTBlockOptionIDStation) {
+        if (!NTYTIsValidBlockOptionID(optionID)) {
             result = [NTYTMutationResult failureWithCode:NTYTMutationErrorInvalidRequest
                                                  reason:NTYTMutationFailureReasonUnsupportedOption
                                         underlyingError:nil];

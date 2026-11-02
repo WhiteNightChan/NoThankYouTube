@@ -1,8 +1,5 @@
 #import "NTYTSettingsTransferModels.h"
 
-#import "Core/NTYTRuntimeModel.h"
-#import "NTYTStoredSettings.h"
-
 @implementation NTYTPreparedImport
 
 - (instancetype)initWithSettings:(NTYTStoredSettings *)settings

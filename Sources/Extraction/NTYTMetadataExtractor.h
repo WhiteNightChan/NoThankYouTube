@@ -1,7 +1,5 @@
 #import <Foundation/Foundation.h>
 
-#import "Core/NTYTTypes.h"
-
 @class NTYTContentMetadata;
 @class NTYTElementQualification;
 

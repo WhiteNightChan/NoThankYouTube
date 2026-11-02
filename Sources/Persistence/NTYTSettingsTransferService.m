@@ -4,7 +4,6 @@
 #import "NTYTSettingsStore.h"
 #import "NTYTSettingsTransferModels.h"
 #import "NTYTSnapshotAssembler.h"
-#import "NTYTStoredSettings.h"
 
 NSErrorDomain const NTYTSettingsTransferErrorDomain = @"com.whitenightchan.nothankyoutube.transfer";
 

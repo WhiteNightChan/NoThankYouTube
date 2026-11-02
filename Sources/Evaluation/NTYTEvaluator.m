@@ -67,10 +67,13 @@
             return NTYTOptionPhaseOutcomeInternalFailure;
         }
         // Invalid semantic inputs are internal failure, not target uncertainty.
-        if (qualification.contentFamily < NTYTContentFamilyUnresolved ||
-            qualification.contentFamily > NTYTContentFamilyPlaylist ||
-            qualification.playlistSubtype < NTYTPlaylistSubtypeUnresolved ||
-            qualification.playlistSubtype > NTYTPlaylistSubtypeMix ||
+        if ((qualification.contentFamily != NTYTContentFamilyUnresolved &&
+             qualification.contentFamily != NTYTContentFamilyVideo &&
+             qualification.contentFamily != NTYTContentFamilyPost &&
+             qualification.contentFamily != NTYTContentFamilyPlaylist) ||
+            (qualification.playlistSubtype != NTYTPlaylistSubtypeUnresolved &&
+             qualification.playlistSubtype != NTYTPlaylistSubtypeNormal &&
+             qualification.playlistSubtype != NTYTPlaylistSubtypeMix) ||
             (qualification.shortsClassification != NTYTShortsClassificationNonShorts &&
              qualification.shortsClassification != NTYTShortsClassificationShorts &&
              qualification.shortsClassification != NTYTShortsClassificationUnavailable) ||
@@ -92,8 +95,10 @@
             (qualification.cellDivider != NTYTPresentationQualificationNotConfirmed &&
              qualification.cellDivider != NTYTPresentationQualificationConfirmed &&
              qualification.cellDivider != NTYTPresentationQualificationUnavailable) ||
-            qualification.horizontalShelfException < NTYTHorizontalShelfExceptionUnavailable ||
-            qualification.horizontalShelfException > NTYTHorizontalShelfExceptionOther ||
+            (qualification.horizontalShelfException != NTYTHorizontalShelfExceptionUnavailable &&
+             qualification.horizontalShelfException != NTYTHorizontalShelfExceptionHistory &&
+             qualification.horizontalShelfException != NTYTHorizontalShelfExceptionPlaylist &&
+             qualification.horizontalShelfException != NTYTHorizontalShelfExceptionOther) ||
             (qualification.horizontalShelf != NTYTPresentationQualificationConfirmed &&
              qualification.horizontalShelfException != NTYTHorizontalShelfExceptionUnavailable) ||
             (qualification.contentFamily != NTYTContentFamilyPlaylist &&

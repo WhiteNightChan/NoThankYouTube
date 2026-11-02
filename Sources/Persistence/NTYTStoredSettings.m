@@ -87,13 +87,11 @@
 
 @implementation NTYTRawSettings
 
-- (instancetype)initWithAbsent:(BOOL)absent
-                  baseDegraded:(BOOL)baseDegraded
-                         listStateMap:(NSDictionary<NSNumber *,NTYTRawList *> *)listStateMap
-                       blockOptionState:(NTYTBlockOptionState *)blockOptionState {
+- (instancetype)initWithListStateMap:(NSDictionary<NSNumber *,NTYTRawList *> *)listStateMap
+                        baseDegraded:(BOOL)baseDegraded
+                    blockOptionState:(NTYTBlockOptionState *)blockOptionState {
     self = [super init];
     if (self) {
-        _absent = absent;
         _baseDegraded = baseDegraded;
         _listStateMap = [listStateMap copy];
         NSParameterAssert(blockOptionState);

@@ -79,10 +79,6 @@
                    matcherExpression:matcherExpression];
 }
 
-+ (instancetype)videoModifierNegative:(BOOL)negative {
-    return [self predicateModifierWithKind:NTYTModifierKindVideo negative:negative];
-}
-
 + (instancetype)predicateModifierWithKind:(NTYTModifierKind)kind
                                   negative:(BOOL)negative {
     NSParameterAssert(kind == NTYTModifierKindVideo ||
@@ -133,11 +129,11 @@
 
 @implementation NTYTRuntimeSettingsSnapshot
 
-- (instancetype)initWithListStates:(NSDictionary<NSNumber *,NTYTRuntimeListState *> *)listStates
-                            blockOptionState:(NTYTBlockOptionState *)blockOptionState {
+- (instancetype)initWithListStateMap:(NSDictionary<NSNumber *,NTYTRuntimeListState *> *)listStateMap
+                       blockOptionState:(NTYTBlockOptionState *)blockOptionState {
     self = [super init];
     if (self) {
-        _listStates = [listStates copy];
+        _listStateMap = [listStateMap copy];
         NSParameterAssert(blockOptionState);
         _blockOptionState = blockOptionState;
     }
@@ -145,19 +141,19 @@
 }
 
 - (nullable NTYTRuntimeListState *)stateForListID:(NTYTListID)listID {
-    return self.listStates[@(listID)];
+    return self.listStateMap[@(listID)];
 }
 
 + (instancetype)emptySnapshot {
-    NSMutableDictionary<NSNumber *, NTYTRuntimeListState *> *states =
+    NSMutableDictionary<NSNumber *, NTYTRuntimeListState *> *emptyListStateMap =
         [NSMutableDictionary dictionary];
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
-        states[@(definition.listID)] =
+        emptyListStateMap[@(definition.listID)] =
             [[NTYTRuntimeListState alloc] initWithListID:definition.listID
                                                  matchOptionState:definition.defaultMatchOptionState
                                                    ruleSequence:@[]];
     }
-    return [[self alloc] initWithListStates:states blockOptionState:[NTYTBlockOptionState allOffState]];
+    return [[self alloc] initWithListStateMap:emptyListStateMap blockOptionState:[NTYTBlockOptionState allOffState]];
 }
 
 @end

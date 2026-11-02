@@ -40,7 +40,6 @@ NS_ASSUME_NONNULL_BEGIN
                        matcherExpression:(NTYTMatcherExpression *)matcherExpression;
 + (instancetype)predicateModifierWithKind:(NTYTModifierKind)kind
                                   negative:(BOOL)negative;
-+ (instancetype)videoModifierNegative:(BOOL)negative;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
@@ -73,11 +72,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface NTYTRuntimeSettingsSnapshot : NSObject
 
-@property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTRuntimeListState *> *listStates;
+@property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTRuntimeListState *> *listStateMap;
 @property(nonatomic, strong, readonly) NTYTBlockOptionState *blockOptionState;
 
-- (instancetype)initWithListStates:(NSDictionary<NSNumber *, NTYTRuntimeListState *> *)listStates
-                            blockOptionState:(NTYTBlockOptionState *)blockOptionState NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithListStateMap:(NSDictionary<NSNumber *, NTYTRuntimeListState *> *)listStateMap
+                       blockOptionState:(NTYTBlockOptionState *)blockOptionState NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 - (nullable NTYTRuntimeListState *)stateForListID:(NTYTListID)listID;
 + (instancetype)emptySnapshot;

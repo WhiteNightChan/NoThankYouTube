@@ -56,7 +56,6 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
 
 - (nullable NSDictionary *)dictionaryAtPath:(NSArray<NSString *> *)path
                                         root:(NSDictionary *)root
-                                missingValid:(BOOL *)missingValid
                                     degraded:(BOOL *)degraded;
 - (NSDictionary<NSNumber *, NSNumber *> *)readOptionOverrideMapFromListDictionary:(NSDictionary *)listDictionary
                                                               definition:(NTYTListDefinition *)definition
@@ -100,10 +99,9 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
                 [[NTYTRawList alloc] initWithValidOptionOverrides:@{}
                                                    ruleOccurrences:@[]];
         }
-        NTYTRawSettings *raw = [[NTYTRawSettings alloc] initWithAbsent:YES
-                                                         baseDegraded:NO
-                                                                listStateMap:emptyListStateMap
-                                                              blockOptionState:[NTYTBlockOptionState allOffState]];
+        NTYTRawSettings *raw = [[NTYTRawSettings alloc] initWithListStateMap:emptyListStateMap
+                                                                baseDegraded:NO
+                                                            blockOptionState:[NTYTBlockOptionState allOffState]];
         return [[NTYTSettingsLoadResult alloc]
             initWithLifecycleState:NTYTSettingsLifecycleStateAbsent
                        rawSettings:raw
@@ -220,10 +218,8 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
 
     NSMutableDictionary<NSNumber *, NTYTRawList *> *rawListStateMap = [NSMutableDictionary dictionary];
     for (NTYTListDefinition *definition in NTYTListDefinition.allDefinitions) {
-        BOOL missingValid = NO;
         NSDictionary *listDictionary = [self dictionaryAtPath:definition.storagePath
                                                          root:root
-                                                 missingValid:&missingValid
                                                      degraded:&degraded];
         if (!listDictionary) {
             rawListStateMap[@(definition.listID)] =
@@ -252,10 +248,9 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
     }
 
     NTYTRawSettings *rawSettings =
-        [[NTYTRawSettings alloc] initWithAbsent:NO
-                                   baseDegraded:degraded
-                                          listStateMap:rawListStateMap
-                                        blockOptionState:blockOptionState];
+        [[NTYTRawSettings alloc] initWithListStateMap:rawListStateMap
+                                         baseDegraded:degraded
+                                     blockOptionState:blockOptionState];
     NTYTSettingsLifecycleState state = degraded
         ? NTYTSettingsLifecycleStateSupportedDegraded
         : NTYTSettingsLifecycleStateSupportedValid;
@@ -266,7 +261,6 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
 
 - (NSDictionary *)dictionaryAtPath:(NSArray<NSString *> *)path
                                root:(NSDictionary *)root
-                       missingValid:(BOOL *)missingValid
                            degraded:(BOOL *)degraded {
     id current = root;
     for (NSString *component in path) {
@@ -276,9 +270,6 @@ static BOOL NTYTIsIntegerVersion(id value, NSInteger expected) {
         }
         id next = [(NSDictionary *)current objectForKey:component];
         if (!next) {
-            if (missingValid) {
-                *missingValid = YES;
-            }
             return nil;
         }
         if (![next isKindOfClass:[NSDictionary class]]) {

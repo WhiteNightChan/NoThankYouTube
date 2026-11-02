@@ -232,13 +232,17 @@ static BOOL NTYTInstallSettingsSection(id manager, id entry) {
 
     if (!general || !videoItem || !channelItem || !postItem || !playlistItem || !global || !optionItem ||
         !importSettings || !exportSettings || !versionItem) {
-        NTYTLog(@"[SettingsIntegration] install failed: section items general=%@ videos=%@ channels=%@ posts=%@ playlists=%@ global=%@",
+        NTYTLog(@"[SettingsIntegration] install failed: section items general=%@ videos=%@ channels=%@ posts=%@ playlists=%@ global=%@ option=%@ import=%@ export=%@ version=%@",
                 general ? @"OK" : @"nil",
                 videoItem ? @"OK" : @"nil",
                 channelItem ? @"OK" : @"nil",
                 postItem ? @"OK" : @"nil",
                 playlistItem ? @"OK" : @"nil",
-                global ? @"OK" : @"nil");
+                global ? @"OK" : @"nil",
+                optionItem ? @"OK" : @"nil",
+                importSettings ? @"OK" : @"nil",
+                exportSettings ? @"OK" : @"nil",
+                versionItem ? @"OK" : @"nil");
         return NO;
     }
 

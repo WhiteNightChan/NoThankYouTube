@@ -1,7 +1,6 @@
 #import <Foundation/Foundation.h>
 
 @class NTYTRuntimeSettingsSnapshot;
-@class YTIElementRenderer;
 
 NS_ASSUME_NONNULL_BEGIN
 

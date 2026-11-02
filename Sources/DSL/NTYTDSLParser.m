@@ -58,7 +58,6 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
 
 @property(nonatomic, copy) NSString *pattern;
 @property(nonatomic) NSRegularExpressionOptions options;
-@property(nonatomic) NSUInteger consumedLength;
 
 @end
 
@@ -526,7 +525,6 @@ static BOOL NTYTStartsWithAtIndex(NSString *string, NSString *prefix, NSUInteger
     NTYTRegexParseResult *result = [NTYTRegexParseResult new];
     result.pattern = pattern;
     result.options = hasIFlag ? NSRegularExpressionCaseInsensitive : 0;
-    result.consumedLength = cursor;
     return result;
 }
 

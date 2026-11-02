@@ -151,8 +151,8 @@ static NSError *NTYTAssemblyError(NSString *message) {
             [[NTYTStoredSettings alloc] initWithListStateMap:storedListStateMap
                                               blockOptionState:blockOptionState];
         NTYTRuntimeSettingsSnapshot *snapshot =
-            [[NTYTRuntimeSettingsSnapshot alloc] initWithListStates:runtimeListStateMap
-                                                            blockOptionState:blockOptionState];
+            [[NTYTRuntimeSettingsSnapshot alloc] initWithListStateMap:runtimeListStateMap
+                                                       blockOptionState:blockOptionState];
         return [[NTYTSnapshotAssemblyResult alloc]
             initWithAcceptedSettings:acceptedSettings
                              snapshot:snapshot
@@ -188,10 +188,9 @@ static NSError *NTYTAssemblyError(NSString *message) {
                                                ruleOccurrences:occurrences];
     }
 
-    NTYTRawSettings *raw = [[NTYTRawSettings alloc] initWithAbsent:NO
-                                                     baseDegraded:NO
-                                                            listStateMap:rawListStateMap
-                                                          blockOptionState:settings.blockOptionState];
+    NTYTRawSettings *raw = [[NTYTRawSettings alloc] initWithListStateMap:rawListStateMap
+                                                           baseDegraded:NO
+                                                       blockOptionState:settings.blockOptionState];
     NSError *assemblyError = nil;
     NTYTSnapshotAssemblyResult *result = [self assembleRawSettings:raw error:&assemblyError];
     if (!result || result.hadDegradation) {

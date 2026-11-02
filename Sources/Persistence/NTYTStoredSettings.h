@@ -64,15 +64,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface NTYTRawSettings : NSObject
 
-@property(nonatomic, readonly, getter=isAbsent) BOOL absent;
 @property(nonatomic, readonly) BOOL baseDegraded;
 @property(nonatomic, copy, readonly) NSDictionary<NSNumber *, NTYTRawList *> *listStateMap;
 @property(nonatomic, strong, readonly) NTYTBlockOptionState *blockOptionState;
 
-- (instancetype)initWithAbsent:(BOOL)absent
-                  baseDegraded:(BOOL)baseDegraded
-                         listStateMap:(NSDictionary<NSNumber *, NTYTRawList *> *)listStateMap
-                       blockOptionState:(NTYTBlockOptionState *)blockOptionState NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithListStateMap:(NSDictionary<NSNumber *, NTYTRawList *> *)listStateMap
+                        baseDegraded:(BOOL)baseDegraded
+                    blockOptionState:(NTYTBlockOptionState *)blockOptionState NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 
 @end
